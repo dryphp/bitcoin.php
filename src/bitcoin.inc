@@ -314,9 +314,8 @@ class BitcoinClient extends jsonrpc_client {
       throw new BitcoinClientException("Client query requires a message");
     $msg = new jsonrpcmsg($message);
     if (func_num_args() > 1) {
-      array_shift(func_get_args());
-      foreach (func_get_args() as $a) {
-        $msg->addParam(self::query_arg_to_parameter($a));
+      for ($i = 1; $i < func_num_args(); $i++) {
+        $msg->addParam(self::query_arg_to_parameter(func_get_arg($i)));
       }
     }
     $response = $this->send($msg);
