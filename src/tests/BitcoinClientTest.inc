@@ -90,17 +90,31 @@ class BitcoinClientTest extends PHPUnit_Framework_TestCase {
   }
 
   public function testgetaddress() {
+  	$this->markTestSkipped();
     //$this->allGood->setDebug(2);
     $address = $this->allGood->query("getnewaddress");
     $this->assertTrue(Bitcoin::checkAddress($address));
   }
+
   public function testgetaddressWithLabel() {
+	$this->markTestSkipped();
+    $this->allGood->setDebug(2);
   	$address = $this->allGood->query("getnewaddress", "test label");
   	$this->assertTrue(Bitcoin::checkAddress($address));
   }
 
   public function testCan_connect() {
     $this->assertTrue($this->allGood->can_connect());
+  }
+
+  public function testQuery_arg_to_parameter() {
+  	$this->assertEquals($this->allGood->query_arg_to_parameter("string"), new jsonrpcval("string"));
+  	$this->assertEquals($this->allGood->query_arg_to_parameter("string with spaces"), new jsonrpcval("string with spaces"));
+  	$this->assertEquals($this->allGood->query_arg_to_parameter(3), new jsonrpcval(3, "int"));
+  	$this->assertEquals($this->allGood->query_arg_to_parameter(3.14159), new jsonrpcval(3.14159, "double"));
+	$this->assertEquals($this->allGood->query_arg_to_parameter(TRUE), new jsonrpcval(TRUE, "boolean"));
+	$this->assertEquals($this->allGood->query_arg_to_parameter(array("fnord")), new jsonrpcval(array("fnord"), "array"));
+
   }
 
 }

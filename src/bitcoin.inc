@@ -279,15 +279,15 @@ class BitcoinClient extends jsonrpc_client {
    * @return jsonrpcval
    * @throws none
    */
-  private function query_arg_to_parameter($a) {
+  public function query_arg_to_parameter($a) {
     $type = "";// "string" is encoded as this default type value in xmlrpc.inc
     if (is_numeric($a)) {
       if (intval($a) != floatval($a)) {
-        $a = intval($a);
-        $type = "int";
-      } else {
         $a = floatval($a);
         $type = "double";
+      } else {
+        $a = intval($a);
+        $type = "int";
       }
     }
     if (is_bool($a))
@@ -314,9 +314,9 @@ class BitcoinClient extends jsonrpc_client {
       throw new BitcoinClientException("Client query requires a message");
     $msg = new jsonrpcmsg($message);
     if (func_num_args() > 1) {
-      array_shift($func_get_args());
-      foreach ($func_get_args() as $a) {
-        $msg->addParam(query_arg_to_parameter($a));
+      array_shift(func_get_args());
+      foreach (func_get_args() as $a) {
+        $msg->addParam(self::query_arg_to_parameter($a));
       }
     }
     $response = $this->send($msg);
