@@ -94,6 +94,10 @@ class BitcoinClientTest extends PHPUnit_Framework_TestCase {
     $address = $this->allGood->query("getnewaddress");
     $this->assertTrue(Bitcoin::checkAddress($address));
   }
+  public function testgetaddressWithLabel() {
+  	$address = $this->allGood->query("getnewaddress", "test label");
+  	$this->assertTrue(Bitcoin::checkAddress($address));
+  }
 
   public function testCan_connect() {
     $this->assertTrue($this->allGood->can_connect());

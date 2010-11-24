@@ -304,7 +304,7 @@ class BitcoinClient extends jsonrpc_client {
   /**
    * Send a JSON-RPC message and optional parameter arguments to the server
    * @param string $message
-   * @param mixed $args ...
+   * @param mixed $args,...
    * @return mixed
    * @throws BitcoinClientException
    * @see xmlrpc.inc:php_xmlrpc_decode()
