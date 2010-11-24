@@ -97,8 +97,8 @@ class BitcoinClientTest extends PHPUnit_Framework_TestCase {
   }
 
   public function testgetaddressWithLabel() {
-	$this->markTestSkipped();
-    $this->allGood->setDebug(2);
+	//$this->markTestSkipped();
+    //$this->allGood->setDebug(2);
   	$address = $this->allGood->query("getnewaddress", "test label");
   	$this->assertTrue(Bitcoin::checkAddress($address));
   }
@@ -112,9 +112,10 @@ class BitcoinClientTest extends PHPUnit_Framework_TestCase {
   	$this->assertEquals($this->allGood->query_arg_to_parameter("string with spaces"), new jsonrpcval("string with spaces"));
   	$this->assertEquals($this->allGood->query_arg_to_parameter(3), new jsonrpcval(3, "int"));
   	$this->assertEquals($this->allGood->query_arg_to_parameter(3.14159), new jsonrpcval(3.14159, "double"));
+	$this->assertEquals($this->allGood->query_arg_to_parameter("3"), new jsonrpcval(3, "int"));
+  	$this->assertEquals($this->allGood->query_arg_to_parameter("3.14159"), new jsonrpcval(3.14159, "double"));
 	$this->assertEquals($this->allGood->query_arg_to_parameter(TRUE), new jsonrpcval(TRUE, "boolean"));
 	$this->assertEquals($this->allGood->query_arg_to_parameter(array("fnord")), new jsonrpcval(array("fnord"), "array"));
-
   }
 
 }
