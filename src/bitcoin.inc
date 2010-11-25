@@ -1,8 +1,17 @@
 <?php
+/**
+ * Bitcoin classes
+ *
+ * Copyright (C) 2010 by Mike Gogulski - All rights reversed http://www.unlicense.org/ (public domain)
+ *
+ * @author Mike Gogulski - http://www.nostate.com/ http://www.gogulski.com/
+ * @author theymos - theymos @ http://bitcoin.org/smf
+ */
 
 define("BITCOIN_ADDRESS_VERSION", "00");// this is a hex byte
 /**
  * Bitcoin utility functions class
+ *
  * @author theymos (functionality)
  * @author Mike Gogulski (encapsulation, string abstraction, PHPDoc)
  */
@@ -18,6 +27,7 @@ class Bitcoin {
 
   /**
    * Convert a hex string into a (big) integer
+   *
    * @param string $hex
    * @return int
    * @access private
@@ -35,6 +45,7 @@ class Bitcoin {
 
   /**
    * Convert an integer into a hex string
+   *
    * @param int $dec
    * @return string
    * @access private
@@ -52,6 +63,7 @@ class Bitcoin {
 
   /**
    * Convert a Base58-encoded integer into the equivalent hex string representation
+   *
    * @param string $base58
    * @return string
    * @access private
@@ -82,6 +94,7 @@ class Bitcoin {
 
   /**
    * Convert a hex string representation of an integer into the equivalent Base58 representation
+   *
    * @param string $hex
    * @return string
    * @access private
@@ -112,6 +125,7 @@ class Bitcoin {
 
   /**
    * Convert a 160-bit Bitcoin hash to a Bitcoin address
+   *
    * @author theymos
    * @param string $hash160
    * @param string $addressversion
@@ -129,6 +143,7 @@ class Bitcoin {
 
   /**
    * Convert a Bitcoin address to a 160-bit Bitcoin hash
+   *
    * @author theymos
    * @param string $addr
    * @return string Bitcoin hash
@@ -142,6 +157,7 @@ class Bitcoin {
 
   /**
    * Determine if a string is a valid Bitcoin address
+   *
    * @author theymos
    * @param string $addr String to test
    * @param string $addressversion
@@ -166,6 +182,7 @@ class Bitcoin {
 
   /**
    * Convert the input to its 160-bit Bitcoin hash
+   *
    * @param string $data
    * @return string
    * @access private
@@ -177,6 +194,7 @@ class Bitcoin {
 
   /**
    * Convert a Bitcoin public key to a 160-bit Bitcoin hash
+   *
    * @param string $pubkey
    * @return string
    * @access public
@@ -187,6 +205,7 @@ class Bitcoin {
 
   /**
    * Remove leading "0x" from a hex value if present.
+   *
    * @param string $string
    * @return string
    * @access public
@@ -199,8 +218,13 @@ class Bitcoin {
   }
 }
 
+/**
+ * Exception class for BitcoinClient
+ * @author Mike Gogulski
+ *
+ */
 class BitcoinClientException extends ErrorException {
-  // Redefine the exception so message and severity aren't optional
+  // Redefine the exception so message isn't optional
   public function __construct($message, $code = 0, $severity = E_USER_NOTICE, Exception $previous = null) {
     parent::__construct($message, $code, $severity, $previous);
   }
@@ -221,6 +245,7 @@ class BitcoinClient extends jsonrpc_client {
 
   /**
    * Create a jsonrpc_client object to talk to the bitcoin server and return it, or false on failure.
+   *
    * @param string $scheme "http" or "https"
    * @param string $username User name to use in connection the Bitcoin server's JSON-RPC interface
    * @param string $password Server password
@@ -260,6 +285,7 @@ class BitcoinClient extends jsonrpc_client {
    * Test if the connection to the Bitcoin JSON-RPC server is working
    *
    * The check is done by calling the server's getinfo() method and checking for a fault.
+   *
    * @return mixed boolean TRUE if successful, cURL fault string otherwise
    * @access public
    * @throws none
@@ -275,6 +301,7 @@ class BitcoinClient extends jsonrpc_client {
 
   /**
    * Convert a Bitcoin server query argument to a jsonrpcval
+   *
    * @param mixed $a
    * @return jsonrpcval
    * @throws none
@@ -303,6 +330,7 @@ class BitcoinClient extends jsonrpc_client {
 
   /**
    * Send a JSON-RPC message and optional parameter arguments to the server
+   *
    * @param string $message
    * @param mixed $args,...
    * @return mixed

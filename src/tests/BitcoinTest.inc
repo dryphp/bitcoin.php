@@ -4,7 +4,10 @@ require_once dirname(__FILE__) . '/../bitcoin.inc';
 
 /**
  * Test class for Bitcoin.
- * @author Mike Gogulski
+ *
+ * Copyright (C) 2010 by Mike Gogulski - All rights reversed http://www.unlicense.org/ (public domain)
+ *
+ * @author Mike Gogulski - http://www.nostate.com/ http://www.gogulski.com/
  */
 class BitcoinTest extends PHPUnit_Framework_TestCase {
 	protected function setUp() {
@@ -30,7 +33,7 @@ class BitcoinTest extends PHPUnit_Framework_TestCase {
   }
 
   /**
-   * @todo Implement testCheckAddress().
+   * Test Bitcoin::checkAddress() with various good and bad addresses.
    */
   public function testCheckAddress() {
   	$this->assertTrue(TRUE);
@@ -51,7 +54,7 @@ class BitcoinTest extends PHPUnit_Framework_TestCase {
   }
 
   /**
-   * @todo Implement testRemove0x().
+   * Test the Bitcoin::remove0x() function.
    */
   public function testRemove0x() {
   	$this->assertEquals(Bitcoin::remove0x("abcdefg"), "abcdefg");
