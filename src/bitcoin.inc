@@ -220,8 +220,8 @@ class Bitcoin {
 
 /**
  * Exception class for BitcoinClient
- * @author Mike Gogulski
  *
+ * @author Mike Gogulski
  */
 class BitcoinClientException extends ErrorException {
   // Redefine the exception so message isn't optional
@@ -239,7 +239,11 @@ require_once(dirname(__FILE__) . "/includes/jsonrpc.inc");
 
 /**
  * Bitcoin client class for access to a Bitcoin server via JSON-RPC-HTTP[S]
+ *
+ * Implements the methods documented at https://www.bitcoin.org/wiki/doku.php?id=api
+ *
  * @author Mike Gogulski
+ * @version 0.3.16
  */
 class BitcoinClient extends jsonrpc_client {
 
@@ -286,13 +290,13 @@ class BitcoinClient extends jsonrpc_client {
    *
    * The check is done by calling the server's getinfo() method and checking for a fault.
    *
-   * @return mixed boolean TRUE if successful, cURL fault string otherwise
+   * @return mixed boolean TRUE if successful, or a fault string otherwise
    * @access public
    * @throws none
    */
   public function can_connect() {
     try {
-      $r = $this->query("getinfo");
+      $r = $this->getinfo();
     } catch (BitcoinClientException $e) {
       return $e->getMessage();
     }
@@ -302,44 +306,49 @@ class BitcoinClient extends jsonrpc_client {
   /**
    * Convert a Bitcoin server query argument to a jsonrpcval
    *
-   * @param mixed $a
+   * @param mixed $argument
    * @return jsonrpcval
    * @throws none
+   * @todo Make this method private.
    */
-  public function query_arg_to_parameter($a) {
+  public function query_arg_to_parameter($argument) {
     $type = "";// "string" is encoded as this default type value in xmlrpc.inc
-    if (is_numeric($a)) {
-      if (intval($a) != floatval($a)) {
-        $a = floatval($a);
+    if (is_numeric($argument)) {
+      if (intval($argument) != floatval($argument)) {
+        $argument = floatval($argument);
         $type = "double";
       } else {
-        $a = intval($a);
+        $argument = intval($argument);
         $type = "int";
       }
     }
-    if (is_bool($a))
+    if (is_bool($argument))
       $type = "boolean";
-    if (is_int($a))
+    if (is_int($argument))
       $type = "int";
-    if (is_float($a))
+    if (is_float($argument))
       $type = "double";
-    if (is_array($a))
+    if (is_array($argument))
       $type = "array";
-    return new jsonrpcval($a, $type);
+    return new jsonrpcval($argument, $type);
   }
 
   /**
-   * Send a JSON-RPC message and optional parameter arguments to the server
+   * Send a JSON-RPC message and optional parameter arguments to the server.
+   *
+   * Use the API functions if possible. This method remains public to support
+   * changes being made to the API before this libarary can be updated.
    *
    * @param string $message
    * @param mixed $args,...
    * @return mixed
    * @throws BitcoinClientException
+   * @return mixed
    * @see xmlrpc.inc:php_xmlrpc_decode()
    */
   public function query($message) {
     if (!$message || empty($message))
-      throw new BitcoinClientException("Client query requires a message");
+      throw new BitcoinClientException("Bitcoin client query requires a message");
     $msg = new jsonrpcmsg($message);
     if (func_num_args() > 1) {
       for ($i = 1; $i < func_num_args(); $i++) {
@@ -352,4 +361,296 @@ class BitcoinClient extends jsonrpc_client {
     }
     return php_xmlrpc_decode($response->value());
   }
+
+  /*
+   * The following functions implement the Bitcoin RPC API as documented at https://www.bitcoin.org/wiki/doku.php?id=api
+   */
+
+  /**
+   * Safely copies wallet.dat to destination, which can be a directory or a path with filename.
+   *
+   * @param string $destination
+   * @return mixed Nothing, or an error object
+   * @throws BitcoinClientException
+   */
+  public function backupwallet($destination) {
+    if (!$destination || $empty($destination))
+      throw new BitcoinClientException("backupwallet requires a destination");
+    return $this->query("backupwallet", $destination);
+  }
+
+  /**
+   * Returns the server's available balance.
+   *
+   * @return float Bitcoin balance
+   * @throws BitcoinClientException
+   */
+  public function getbalance() {
+    return $this->query("getaddressesbylabel");
+  }
+
+  /**
+   * Returns the number of blocks in the longest block chain.
+   *
+   * @return integer
+   * @throws BitcoinClientException
+   */
+  public function getblockcount() {
+    return $this->query("getblockcount");
+  }
+
+  /**
+   * Returns the block number of the latest block in the longest block chain.
+   *
+   * @return integer
+   * @throws BitcoinClientException
+   */
+  public function getblocknumber() {
+    return $this->query("getblocknumber");
+  }
+
+  /**
+   * Returns the number of connections to other nodes.
+   *
+   * @return integer
+   * @throws BitcoinClientException
+   */
+  public function getconnectioncount($destination) {
+    return $this->query("getconnectioncount");
+  }
+
+  /**
+   * Returns the proof-of-work difficulty as a multiple of the minimum difficulty.
+   *
+   * @return float
+   * @throws BitcoinClientException
+   */
+  public function getdifficulty() {
+    return $this->query("getdifficulty");
+  }
+
+  /**
+   * Returns boolean true if server is trying to generate bitcoins, false otherwise.
+   *
+   * @return boolean
+   * @throws BitcoinClientException
+   */
+  public function getgenerate() {
+    return $this->query("getgenerate");
+  }
+
+  /**
+   * Tell Bitcoin server to generate Bitcoins or not, and how many processors to use.
+   *
+   * Tries to overcome a boo-boo in the return status of getgenerate in the case where
+   * maxproc == 0 by just turning generation off if "setgenerate true 0" is called.
+   *
+   * @param boolean generate
+   * @param integer Limit generation to $maxproc processors, unlimited if -1
+   * @return Nothing if successful, error object if not
+   * @throws BitcoinClientException
+   */
+  public function setgenerate($generate = TRUE, $maxproc = -1) {
+    if ($maxproc < -1)
+      throw new BitcoinClientException('setgenerate: $maxproc must be >= -1');
+    if ($maxproc = 0)
+      $generate = FALSE;
+    return $this->query("setgenerate", $generate, $maxproc);
+  }
+
+  /**
+   * Returns an object containing server information.
+   *
+   * @return object
+   * @throws BitcoinClientException
+   */
+  public function getinfo() {
+    return $this->query("getinfo");
+  }
+
+  /**
+   * Returns the label associated with the given address.
+   *
+   * @param string $address
+   * @return string
+   * @throws BitcoinClientException
+   */
+  public function getlabel($address) {
+    if (!$address || $empty($address))
+      throw new BitcoinClientException("getlabel requires an address");
+    return $this->query("getlabel", $address);
+  }
+
+  /**
+   * Sets the label associated with the given address. $label may be omitted to remove a label from an address.
+   *
+   * @param string $address
+   * @param string $label
+   * @throws BitcoinClientException
+   */
+  public function setlabel($address, $label = "") {
+    if (!$address || $empty($address))
+      throw new BitcoinClientException("setlabel requires a destination");
+    return $this->query("setlabel", $address, $label);
+  }
+
+  /**
+   * Returns a new bitcoin address for receiving payments.
+   *
+   * If $label is specified (recommended), it is added to the address book so payments received with the address will be labeled.
+   *
+   * @param string $label Label to apply to the new address
+   * @throws BitcoinClientException
+   */
+  public function getnewaddress($label = NULL) {
+    if (!$label || $empty($label))
+      return $this->query("getnewaddress");
+    return $this->query("getnewaddress", $label);
+  }
+
+  /**
+   * Returns the total amount received by bitcoinaddress in transactions with at least $minconf confirmations.
+   *
+   * @param string $address
+   * @param integer $minconf Minimum number of confirmations for transactions to be counted
+   * @return float
+   * @throws BitcoinClientException
+   */
+  public function getreceivedbyaddress($address, $minconf = 0) {
+    if (!$address || $empty($address))
+      throw new BitcoinClientException("getreceivedbyaddress requires an address");
+    return $this->query("getreceivedbyaddress", $destination, $minconf);
+  }
+
+  /**
+   * Returns the total amount received by addresses with label in transactions with at least $minconf confirmations.
+   *
+   * @param string $label
+   * @param integer $minconf Minimum number of confirmations for transactions to be counted
+   * @return float
+   * @throws BitcoinClientException
+   */
+  public function getreceivedbylabel($label, $minconf = 0) {
+    if (!$label || $empty($label))
+      throw new BitcoinClientException("getreceivedbylabel requires a label");
+    return $this->query("getreceivedbylabel", $label, $minconf);
+  }
+
+  /**
+   * Safely copies wallet.dat to destination, which can be a directory or a path with filename.
+   *
+   * @param string $destination
+   * @throws BitcoinClientException
+   */
+  public function backupwallet($destination) {
+    if (!$destination || $empty($destination))
+      throw new BitcoinClientException("backupwallet requires a destination");
+    return $this->query("backupwallet", $destination);
+  }
+
+  /**
+   * Return a list of server RPC commands or help for $command, if specified.
+   *
+   * @param string $command
+   * @return string
+   * @throws BitcoinClientException
+   */
+  public function help($command = NULL) {
+    if (!$command || empty($command))
+      return $this->query("help");
+    return $this->query("help", $command);
+  }
+
+  /**
+   * Return an array showing how many Bitcoins have been received by each address in the server's wallet.
+   *
+   * Returns an array of objects containing:
+   * "address" : receiving address
+   * "label" : the label of the receiving address
+   * "amount" : total amount received by the address
+   * "confirmations" : number of confirmations of the most recent transaction included
+   *
+   * @param integer $minconf Minimum number of confirmations before payments are included.
+   * @param boolean $includeempty Whether to include addresses that haven't received any payments.
+   * @return array
+   * @throws BitcoinClientException
+   */
+  public function listreceivedbyaddress($minconf = 1, $includeempty = FALSE) {
+    return $this->query("listreceivedbyaddress", $minconf, $includeempty);
+  }
+
+  /**
+   * Return an array showing how many Bitcoins have been received by each label in the server's wallet.
+   *
+   * Returns an array of objects containing:
+   * "label" : the label of the receiving address
+   * "amount" : total amount received by the address
+   * "confirmations" : number of confirmations of the most recent transaction included
+   *
+   * @param integer $minconf Minimum number of confirmations before payments are included.
+   * @param boolean $includeempty Whether to include addresses that haven't received any payments.
+   * @return array
+   * @throws BitcoinClientException
+   */
+  public function listreceivedbylabel($minconf = 1, $includeempty = FALSE) {
+    return $this->query("listreceivedbylabel", $minconf, $includeempty);
+  }
+
+  /**
+   * Send amount from the server's available balance.
+   *
+   * $amount is a real and is rounded to the nearest 0.01. Returns string “sent” on success.
+   *
+   * @param string $address Destination Bitcoin address or IP address
+   * @param float $amount Amount to send. Will be rounded to the nearest 0.01.
+   * @param string $comment
+   * @param string $comment_to
+   * @return string "sent" on success.
+   * @throws BitcoinClientException
+   * @todo Document arguments better.
+   * @todo Determine if a hostname can be used as an address.
+   */
+  public function sendtoaddress($address, $amount, $comment = NULL, $comment_to = NULL) {
+    if (!$address || $empty($address))
+      throw new BitcoinClientException("sendtoaddress requires a destination address");
+    if (!$amount || $empty($amount))
+      throw new BitcoinClientException("sendtoaddress requires an amount to send");
+    if (!is_numeric($amount))
+      throw new BitcoinClientException("sendtoaddress requires the amount sent to be a number");
+    $amount = floatval($amount);
+    if (!$comment && !$comment_to)
+      return $this->query("sendtoaddress", $address, $amount);
+    if (!$comment_to)
+      return $this->query("sendtoaddress", $address, $amount, $comment);
+    return $this->query("sendtoaddress", $address, $amount, $comment, $comment_to);
+  }
+
+  /**
+   * Stop the Bitcoin server.
+   *
+   * @throws BitcoinClientException
+   */
+  public function stop() {
+    return $this->query("stop");
+  }
+
+  /**
+   * Check that $address looks like a proper Bitcoin address.
+   *
+   * Returns an object containing:
+   * "isvalid" : true or false
+   * "ismine" : true if the address is in the server's wallet
+   * "address" : bitcoinaddress
+   * Note: ismine and address are only returned if the address is valid.
+   *
+   * @param string $address String to test for validity as a Bitcoin address
+   * @return object
+   * @throws BitcoinClientException
+   */
+  public function validateaddress($address) {
+    if (!$address || empty($address))
+      throw new BitcoinClientException("validateaddress requires a Bitcoin address");
+    return $this->query("validateaddress", $address);
+  }
+
 }
