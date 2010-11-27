@@ -537,18 +537,6 @@ class BitcoinClient extends jsonrpc_client {
   }
 
   /**
-   * Safely copies wallet.dat to destination, which can be a directory or a path with filename.
-   *
-   * @param string $destination
-   * @throws BitcoinClientException
-   */
-  public function backupwallet($destination) {
-    if (!$destination || $empty($destination))
-      throw new BitcoinClientException("backupwallet requires a destination");
-    return $this->query("backupwallet", $destination);
-  }
-
-  /**
    * Return a list of server RPC commands or help for $command, if specified.
    *
    * @param string $command
