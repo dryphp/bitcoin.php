@@ -13,7 +13,9 @@ define("BITCOIN_ADDRESS_VERSION", "00");// this is a hex byte
  * Bitcoin utility functions class
  *
  * @author theymos (functionality)
- * @author Mike Gogulski (encapsulation, string abstraction, PHPDoc)
+ * @author Mike Gogulski
+ * 	http://www.gogulski.com/ http://www.nostate.com/
+ *  (encapsulation, string abstraction, PHPDoc)
  */
 class Bitcoin {
 
@@ -222,6 +224,7 @@ class Bitcoin {
  * Exception class for BitcoinClient
  *
  * @author Mike Gogulski
+ * 	http://www.gogulski.com/ http://www.nostate.com/
  */
 class BitcoinClientException extends ErrorException {
   // Redefine the exception so message isn't optional
@@ -242,8 +245,9 @@ require_once(dirname(__FILE__) . "/includes/jsonrpc.inc");
  *
  * Implements the methods documented at https://www.bitcoin.org/wiki/doku.php?id=api
  *
- * @author Mike Gogulski
  * @version 0.3.16
+ * @author Mike Gogulski
+ * 	http://www.gogulski.com/ http://www.nostate.com/
  */
 class BitcoinClient extends jsonrpc_client {
 
