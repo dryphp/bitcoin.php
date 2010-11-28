@@ -5,7 +5,7 @@ require_once dirname(__FILE__) . '/../bitcoin.inc';
 /**
  * Test class for BitcoinClient.
  *
- * Copyright (C) 2010 by Mike Gogulski - All rights reversed http://www.unlicense.org/ (public domain)
+ * By Mike Gogulski - All rights reversed - http://www.unlicense.org/ (public domain)
  *
  * @author Mike Gogulski - http://www.nostate.com/ http://www.gogulski.com/
  */
@@ -120,4 +120,5 @@ class BitcoinClientTest extends PHPUnit_Framework_TestCase {
   }
 
 }
+
 ?>
