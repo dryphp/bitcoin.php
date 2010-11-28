@@ -2,7 +2,7 @@
 /**
  * Bitcoin classes
  *
- * Copyright (C) 2010 by Mike Gogulski - All rights reversed http://www.unlicense.org/ (public domain)
+ * By Mike Gogulski - All rights reversed http://www.unlicense.org/ (public domain)
  *
  * @author Mike Gogulski - http://www.nostate.com/ http://www.gogulski.com/
  * @author theymos - theymos @ http://bitcoin.org/smf
@@ -245,22 +245,32 @@ require_once(dirname(__FILE__) . "/includes/jsonrpc.inc");
  *
  * Implements the methods documented at https://www.bitcoin.org/wiki/doku.php?id=api
  *
- * @version 0.3.16
+ * @version 0.3.17
  * @author Mike Gogulski
  * 	http://www.gogulski.com/ http://www.nostate.com/
  */
 class BitcoinClient extends jsonrpc_client {
 
   /**
-   * Create a jsonrpc_client object to talk to the bitcoin server and return it, or false on failure.
+   * Create a jsonrpc_client object to talk to the bitcoin server and return it,
+   * or false on failure.
    *
-   * @param string $scheme "http" or "https"
-   * @param string $username User name to use in connection the Bitcoin server's JSON-RPC interface
-   * @param string $password Server password
-   * @param string $address Server hostname or IP address
-   * @param mixed $port Server port (string or integer)
-   * @param string $certificate_path Path on the local filesystem to server's PEM certificate (ignored if $scheme != "https")
-   * @param integer $debug_level 0 (default) = no debugging; 1 = echo JSON-RPC messages received to stdout; 2 = log transmitted messages also
+   * @param string $scheme
+   * 	"http" or "https"
+   * @param string $username
+   * 	User name to use in connection the Bitcoin server's JSON-RPC interface
+   * @param string $password
+   * 	Server password
+   * @param string $address
+   * 	Server hostname or IP address
+   * @param mixed $port
+   * 	Server port (string or integer)
+   * @param string $certificate_path
+   * 	Path on the local filesystem to server's PEM certificate (ignored if $scheme != "https")
+   * @param integer $debug_level
+   * 	0 (default) = no debugging;
+   * 	1 = echo JSON-RPC messages received to stdout;
+   * 	2 = log transmitted messages also
    * @return jsonrpc_client
    * @access public
    * @throws BitcoinClientException
@@ -292,7 +302,8 @@ class BitcoinClient extends jsonrpc_client {
   /**
    * Test if the connection to the Bitcoin JSON-RPC server is working
    *
-   * The check is done by calling the server's getinfo() method and checking for a fault.
+   * The check is done by calling the server's getinfo() method and checking
+   * for a fault.
    *
    * @return mixed boolean TRUE if successful, or a fault string otherwise
    * @access public
@@ -371,10 +382,11 @@ class BitcoinClient extends jsonrpc_client {
    */
 
   /**
-   * Safely copies wallet.dat to destination, which can be a directory or a path with filename.
+   * Safely copies wallet.dat to destination, which can be a directory or
+   * a path with filename.
    *
    * @param string $destination
-   * @return mixed Nothing, or an error object
+   * @return mixed Nothing, or an error array
    * @throws BitcoinClientException
    */
   public function backupwallet($destination) {
@@ -444,14 +456,17 @@ class BitcoinClient extends jsonrpc_client {
   }
 
   /**
-   * Tell Bitcoin server to generate Bitcoins or not, and how many processors to use.
+   * Tell Bitcoin server to generate Bitcoins or not, and how many processors
+   * to use.
    *
-   * Tries to overcome a boo-boo in the return status of getgenerate in the case where
-   * maxproc == 0 by just turning generation off if "setgenerate true 0" is called.
+   * Tries to overcome a boo-boo in the return status of getgenerate in the
+   * case where maxproc == 0 by just turning generation off if "setgenerate
+   * true 0" is called.
    *
-   * @param boolean generate
-   * @param integer Limit generation to $maxproc processors, unlimited if -1
-   * @return Nothing if successful, error object if not
+   * @param boolean $generate
+   * @param integer $maxproc
+   * 	Limit generation to $maxproc processors, unlimited if -1
+   * @return Nothing if successful, error array if not
    * @throws BitcoinClientException
    */
   public function setgenerate($generate = TRUE, $maxproc = -1) {
@@ -463,13 +478,27 @@ class BitcoinClient extends jsonrpc_client {
   }
 
   /**
-   * Returns an object containing server information.
+   * Returns an array containing server information.
    *
-   * @return object
+   * @return array
    * @throws BitcoinClientException
    */
   public function getinfo() {
     return $this->query("getinfo");
+  }
+
+  /**
+   * Returns the account associated with the given address.
+   *
+   * @param string $address
+   * @return string
+   * @throws BitcoinClientException
+   * @since 0.3.17
+   */
+  public function getaccount($address) {
+    if (!$address || $empty($address))
+      throw new BitcoinClientException("getaccount requires an address");
+    return $this->query("getaccount", $address);
   }
 
   /**
@@ -478,6 +507,7 @@ class BitcoinClient extends jsonrpc_client {
    * @param string $address
    * @return string
    * @throws BitcoinClientException
+   * @deprecated Since 0.3.17
    */
   public function getlabel($address) {
     if (!$address || $empty($address))
@@ -486,37 +516,58 @@ class BitcoinClient extends jsonrpc_client {
   }
 
   /**
-   * Sets the label associated with the given address. $label may be omitted to remove a label from an address.
+   * Sets the account associated with the given address.
+   * $account may be omitted to remove an account from an address.
+   *
+   * @param string $address
+   * @param string $account
+   * @throws BitcoinClientException
+   * @since 0.3.17
+   */
+  public function setaccount($address, $account = "") {
+    if (!$address || $empty($address))
+      throw new BitcoinClientException("setaccount requires an address");
+    return $this->query("setaccount", $address, $account);
+  }
+
+  /**
+   * Sets the label associated with the given address.
+   * $label may be omitted to remove a label from an address.
    *
    * @param string $address
    * @param string $label
    * @throws BitcoinClientException
+   * @deprecated Since 0.3.17
    */
   public function setlabel($address, $label = "") {
     if (!$address || $empty($address))
-      throw new BitcoinClientException("setlabel requires a destination");
+      throw new BitcoinClientException("setlabel requires an address");
     return $this->query("setlabel", $address, $label);
   }
 
   /**
    * Returns a new bitcoin address for receiving payments.
    *
-   * If $label is specified (recommended), it is added to the address book so payments received with the address will be labeled.
+   * If $account is specified (recommended), it is added to the address book so
+   * payments received with the address will be credited to $account.
    *
-   * @param string $label Label to apply to the new address
+   * @param string $account Label to apply to the new address
    * @throws BitcoinClientException
    */
-  public function getnewaddress($label = NULL) {
-    if (!$label || $empty($label))
+  public function getnewaddress($account = NULL) {
+    if (!$account || $empty($account))
       return $this->query("getnewaddress");
-    return $this->query("getnewaddress", $label);
+    return $this->query("getnewaddress", $account);
   }
 
   /**
-   * Returns the total amount received by bitcoinaddress in transactions with at least $minconf confirmations.
+   * Returns the total amount received by $address in transactions with at least
+   * $minconf confirmations.
    *
    * @param string $address
-   * @param integer $minconf Minimum number of confirmations for transactions to be counted
+   * 	Bitcoin address
+   * @param integer $minconf
+   * 	Minimum number of confirmations for transactions to be counted
    * @return float
    * @throws BitcoinClientException
    */
@@ -527,12 +578,32 @@ class BitcoinClient extends jsonrpc_client {
   }
 
   /**
-   * Returns the total amount received by addresses with label in transactions with at least $minconf confirmations.
+   * Returns the total amount received by addresses associated with $account
+   * in transactions with at least $minconf confirmations.
    *
-   * @param string $label
-   * @param integer $minconf Minimum number of confirmations for transactions to be counted
+   * @param string $account
+   * @param integer $minconf
+   * 	Minimum number of confirmations for transactions to be counted
    * @return float
    * @throws BitcoinClientException
+   * @since 0.3.17
+   */
+  public function getreceivedbyaccount($account, $minconf = 0) {
+    if (!$account || $empty($account))
+      throw new BitcoinClientException("getreceivedbyaccount requires an account");
+    return $this->query("getreceivedbyaccount", $account, $minconf);
+  }
+
+  /**
+   * Returns the total amount received by addresses with $label in
+   * transactions with at least $minconf confirmations.
+   *
+   * @param string $label
+   * @param integer $minconf
+   * 	Minimum number of confirmations for transactions to be counted
+   * @return float
+   * @throws BitcoinClientException
+   * @deprecated Since 0.3.17
    */
   public function getreceivedbylabel($label, $minconf = 0) {
     if (!$label || $empty($label))
@@ -554,17 +625,16 @@ class BitcoinClient extends jsonrpc_client {
   }
 
   /**
-   * Return an array showing how many Bitcoins have been received by each address in the server's wallet.
-   *
-   * Returns an array of objects containing:
-   * "address" : receiving address
-   * "label" : the label of the receiving address
-   * "amount" : total amount received by the address
-   * "confirmations" : number of confirmations of the most recent transaction included
+   * Return an array of arrays showing how many Bitcoins have been received by
+   * each address in the server's wallet.
    *
    * @param integer $minconf Minimum number of confirmations before payments are included.
    * @param boolean $includeempty Whether to include addresses that haven't received any payments.
-   * @return array
+   * @return array An array of arrays. The elements are:
+   * 	"address" => receiving address
+   * 	"account" => the account of the receiving address
+   * 	"amount" => total amount received by the address
+   * 	"confirmations" => number of confirmations of the most recent transaction included
    * @throws BitcoinClientException
    */
   public function listreceivedbyaddress($minconf = 1, $includeempty = FALSE) {
@@ -572,17 +642,36 @@ class BitcoinClient extends jsonrpc_client {
   }
 
   /**
-   * Return an array showing how many Bitcoins have been received by each label in the server's wallet.
+   * Return an array of arrays showing how many Bitcoins have been received by
+   * each account in the server's wallet.
    *
-   * Returns an array of objects containing:
-   * "label" : the label of the receiving address
-   * "amount" : total amount received by the address
-   * "confirmations" : number of confirmations of the most recent transaction included
+   * @param integer $minconf
+   * 	Minimum number of confirmations before payments are included.
+   * @param boolean $includeempty
+   * 	Whether to include addresses that haven't received any payments.
+   * @return array An array of arrays. The elements are:
+   * 	"account" => the label of the receiving address
+   * 	"amount" => total amount received by the address
+   * 	"confirmations" => number of confirmations of the most recent transaction included
+   * @throws BitcoinClientException
+   * @since 0.3.17
+   */
+  public function listreceivedbyaccount($minconf = 1, $includeempty = FALSE) {
+    return $this->query("listreceivedbyaccount", $minconf, $includeempty);
+  }
+
+  /**
+   * Return an array of arrays showing how many Bitcoins have been received by
+   * each label in the server's wallet.
    *
    * @param integer $minconf Minimum number of confirmations before payments are included.
    * @param boolean $includeempty Whether to include addresses that haven't received any payments.
-   * @return array
+   * @return array An array of arrays. The elements are:
+   * 	"label" => the label of the receiving address
+   * 	"amount" => total amount received by the address
+   * 	"confirmations" => number of confirmations of the most recent transaction included
    * @throws BitcoinClientException
+   * @deprecated Since 0.3.17
    */
   public function listreceivedbylabel($minconf = 1, $includeempty = FALSE) {
     return $this->query("listreceivedbylabel", $minconf, $includeempty);
@@ -591,7 +680,7 @@ class BitcoinClient extends jsonrpc_client {
   /**
    * Send amount from the server's available balance.
    *
-   * $amount is a real and is rounded to the nearest 0.01. Returns string “sent” on success.
+   * $amount is a real and is rounded to the nearest 0.01. Returns string "sent" on success.
    *
    * @param string $address Destination Bitcoin address or IP address
    * @param float $amount Amount to send. Will be rounded to the nearest 0.01.
@@ -599,8 +688,7 @@ class BitcoinClient extends jsonrpc_client {
    * @param string $comment_to
    * @return string "sent" on success.
    * @throws BitcoinClientException
-   * @todo Document arguments better.
-   * @todo Determine if a hostname can be used as an address.
+   * @todo Document the comment arguments better.
    */
   public function sendtoaddress($address, $amount, $comment = NULL, $comment_to = NULL) {
     if (!$address || $empty($address))
@@ -629,14 +717,14 @@ class BitcoinClient extends jsonrpc_client {
   /**
    * Check that $address looks like a proper Bitcoin address.
    *
-   * Returns an object containing:
-   * "isvalid" : true or false
-   * "ismine" : true if the address is in the server's wallet
-   * "address" : bitcoinaddress
+   * Returns an array containing:
+   * 	"isvalid" => true or false
+   * 	"ismine" => true if the address is in the server's wallet
+   * 	"address" => bitcoinaddress
    * Note: ismine and address are only returned if the address is valid.
    *
    * @param string $address String to test for validity as a Bitcoin address
-   * @return object
+   * @return array
    * @throws BitcoinClientException
    */
   public function validateaddress($address) {
