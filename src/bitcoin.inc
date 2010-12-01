@@ -4,6 +4,9 @@
  *
  * By Mike Gogulski - All rights reversed http://www.unlicense.org/ (public domain)
  *
+ * If you find this library useful, your donation of Bitcoins to address
+ * 1E3d6EWLgwisXY2CWXDcdQQP2ivRN7e9r9 would be greatly appreciated. Thanks!
+ *
  * @author Mike Gogulski - http://www.nostate.com/ http://www.gogulski.com/
  * @author theymos - theymos @ http://bitcoin.org/smf
  */
@@ -390,7 +393,7 @@ class BitcoinClient extends jsonrpc_client {
    * @throws BitcoinClientException
    */
   public function backupwallet($destination) {
-    if (!$destination || $empty($destination))
+    if (!$destination || empty($destination))
       throw new BitcoinClientException("backupwallet requires a destination");
     return $this->query("backupwallet", $destination);
   }
@@ -402,7 +405,7 @@ class BitcoinClient extends jsonrpc_client {
    * @throws BitcoinClientException
    */
   public function getbalance() {
-    return $this->query("getaddressesbylabel");
+    return $this->query("getbalance");
   }
 
   /**
@@ -431,7 +434,7 @@ class BitcoinClient extends jsonrpc_client {
    * @return integer
    * @throws BitcoinClientException
    */
-  public function getconnectioncount($destination) {
+  public function getconnectioncount() {
     return $this->query("getconnectioncount");
   }
 
@@ -496,7 +499,7 @@ class BitcoinClient extends jsonrpc_client {
    * @since 0.3.17
    */
   public function getaccount($address) {
-    if (!$address || $empty($address))
+    if (!$address || empty($address))
       throw new BitcoinClientException("getaccount requires an address");
     return $this->query("getaccount", $address);
   }
@@ -510,7 +513,7 @@ class BitcoinClient extends jsonrpc_client {
    * @deprecated Since 0.3.17
    */
   public function getlabel($address) {
-    if (!$address || $empty($address))
+    if (!$address || empty($address))
       throw new BitcoinClientException("getlabel requires an address");
     return $this->query("getlabel", $address);
   }
@@ -525,7 +528,7 @@ class BitcoinClient extends jsonrpc_client {
    * @since 0.3.17
    */
   public function setaccount($address, $account = "") {
-    if (!$address || $empty($address))
+    if (!$address || empty($address))
       throw new BitcoinClientException("setaccount requires an address");
     return $this->query("setaccount", $address, $account);
   }
@@ -540,7 +543,7 @@ class BitcoinClient extends jsonrpc_client {
    * @deprecated Since 0.3.17
    */
   public function setlabel($address, $label = "") {
-    if (!$address || $empty($address))
+    if (!$address || empty($address))
       throw new BitcoinClientException("setlabel requires an address");
     return $this->query("setlabel", $address, $label);
   }
@@ -555,7 +558,7 @@ class BitcoinClient extends jsonrpc_client {
    * @throws BitcoinClientException
    */
   public function getnewaddress($account = NULL) {
-    if (!$account || $empty($account))
+    if (!$account || empty($account))
       return $this->query("getnewaddress");
     return $this->query("getnewaddress", $account);
   }
@@ -572,9 +575,9 @@ class BitcoinClient extends jsonrpc_client {
    * @throws BitcoinClientException
    */
   public function getreceivedbyaddress($address, $minconf = 0) {
-    if (!$address || $empty($address))
+    if (!$address || empty($address))
       throw new BitcoinClientException("getreceivedbyaddress requires an address");
-    return $this->query("getreceivedbyaddress", $destination, $minconf);
+    return $this->query("getreceivedbyaddress", $address, $minconf);
   }
 
   /**
@@ -589,7 +592,7 @@ class BitcoinClient extends jsonrpc_client {
    * @since 0.3.17
    */
   public function getreceivedbyaccount($account, $minconf = 0) {
-    if (!$account || $empty($account))
+    if (!$account || empty($account))
       throw new BitcoinClientException("getreceivedbyaccount requires an account");
     return $this->query("getreceivedbyaccount", $account, $minconf);
   }
@@ -606,7 +609,7 @@ class BitcoinClient extends jsonrpc_client {
    * @deprecated Since 0.3.17
    */
   public function getreceivedbylabel($label, $minconf = 0) {
-    if (!$label || $empty($label))
+    if (!$label || empty($label))
       throw new BitcoinClientException("getreceivedbylabel requires a label");
     return $this->query("getreceivedbylabel", $label, $minconf);
   }
@@ -691,9 +694,9 @@ class BitcoinClient extends jsonrpc_client {
    * @todo Document the comment arguments better.
    */
   public function sendtoaddress($address, $amount, $comment = NULL, $comment_to = NULL) {
-    if (!$address || $empty($address))
+    if (!$address || empty($address))
       throw new BitcoinClientException("sendtoaddress requires a destination address");
-    if (!$amount || $empty($amount))
+    if (!$amount || empty($amount))
       throw new BitcoinClientException("sendtoaddress requires an amount to send");
     if (!is_numeric($amount))
       throw new BitcoinClientException("sendtoaddress requires the amount sent to be a number");
