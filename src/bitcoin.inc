@@ -700,6 +700,9 @@ class BitcoinClient extends jsonrpc_client {
       throw new BitcoinClientException("sendtoaddress requires an amount to send");
     if (!is_numeric($amount))
       throw new BitcoinClientException("sendtoaddress requires the amount sent to be a number");
+    $balance = $this->getbalance();
+    if ($amount > $balance)
+     throw new BitcoinClientException("Amount " . $amount . " is more than your current balance of: " . $balance);
     $amount = floatval($amount);
     if (!$comment && !$comment_to)
       return $this->query("sendtoaddress", $address, $amount);
