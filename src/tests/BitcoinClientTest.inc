@@ -10,19 +10,13 @@ require_once dirname(__FILE__) . '/../bitcoin.inc';
  * @author Mike Gogulski - http://www.nostate.com/ http://www.gogulski.com/
  */
 class BitcoinClientTest extends PHPUnit_Framework_TestCase {
-  protected $invalidScheme;
-  protected $noUsername;
-  protected $noPassword;
-  protected $noAddress;
-  protected $invalidPort;
-  protected $unreadableCertificate;
   var $c = NULL;
 
   protected function setUp() {
     if (true && !extension_loaded("curl"))
       dl("php_curl.dll");//retardation on my PHP/Win7 install
     if (!$this->c)
-      $this->c = new BitcoinClient("https", "wordpress", "shoppy", "nobody.local", 8332, 'd:\xampp\php\server.cert', 0);
+      $this->c = new BitcoinClient("https", "fnordbagger", "spambots", "nobody.local", 8332, 'd:\xampp\php\server.cert', 0);
   }
 
   protected function tearDown() {
@@ -32,72 +26,71 @@ class BitcoinClientTest extends PHPUnit_Framework_TestCase {
    * @expectedException BitcoinClientException
    */
   public function testInvalidScheme() {
-    $this->invalidScheme = new BitcoinClient("ftp", "bobo", "mypass", "kremvax.kremlin.su");
+    $junk = new BitcoinClient("ftp", "bobo", "mypass", "kremvax.kremlin.su");
   }
 
   /**
    * @expectedException BitcoinClientException
    */
   public function testNoUsername() {
-    $this->noUsername = new BitcoinClient("http", "", "mypass", "kremvax.kremlin.su");
+    $junk = new BitcoinClient("http", "", "mypass", "kremvax.kremlin.su");
   }
 
   /**
    * @expectedException BitcoinClientException
    */
   public function testNoPassword() {
-    $this->noPassword = new BitcoinClient("https", "bobo", "", "kremvax.kremlin.su");
+    $junk = new BitcoinClient("https", "bobo", "", "kremvax.kremlin.su");
   }
 
   /**
    * @expectedException BitcoinClientException
    */
   public function testNoAddress() {
-    $this->noAddress = new BitcoinClient("https", "bobo", "", "kremvax.kremlin.su");
+    $junk = new BitcoinClient("https", "bobo", "", "kremvax.kremlin.su");
   }
 
   /**
    * @expectedException BitcoinClientException
    */
   public function testInvalidPortString() {
-    $this->invalidPort = new BitcoinClient("http", "bobo", "mypass", "kremvax.kremlin.su", "yeehaw");
+    $junk = new BitcoinClient("http", "bobo", "mypass", "kremvax.kremlin.su", "yeehaw");
   }
 
   /**
    * @expectedException BitcoinClientException
    */
   public function testInvalidPortFloat() {
-    $this->invalidPort = new BitcoinClient("https", "bobo", "mypass", "kremvax@kremlin.su", 3.14159);
+    $junk = new BitcoinClient("https", "bobo", "mypass", "kremvax@kremlin.su", 3.14159);
   }
   /**
    * @expectedException BitcoinClientException
    */
   public function testInvalidPortNegative() {
-    $this->invalidPort = new BitcoinClient("http", "bobo", "mypass", "kremvax@kremlin.su", -273);
+    $junk = new BitcoinClient("http", "bobo", "mypass", "kremvax@kremlin.su", -273);
   }
   /**
    * @expectedException BitcoinClientException
    */
   public function testInvalidPortPositive() {
-    $this->invalidPort = new BitcoinClient("https", "bobo", "mypass", "kremvax@kremlin.su", 65536);
+    $junk = new BitcoinClient("https", "bobo", "mypass", "kremvax@kremlin.su", 65536);
   }
 
   /**
    * @expectedException BitcoinClientException
    */
   public function testUnreadableCertificate() {
-    $this->unreadableCertificate = new BitcoinClient("http", "bobo", "mypass", "kremvax@kremlin.su", 8332, "/doesntexist.cert");
+    $junk = new BitcoinClient("http", "bobo", "mypass", "kremvax@kremlin.su", 8332, "/doesntexist.cert");
   }
 
   public function testgetaddress() {
-    $address = $this->c->query("getnewaddress");
-    $this->assertTrue(Bitcoin::checkAddress($address));
+    $this->assertTrue(Bitcoin::checkAddress($this->c->getnewaddress()));
   }
 
   public function testgetaddressWithLabel() {
-    $address = $this->c->query("getnewaddress", "test label");
+    $address = $this->c->getnewaddress("test label");
     $this->assertTrue(Bitcoin::checkAddress($address));
-    $this->assertEquals($this->c->query("getlabel", $address), "test label");
+    $this->assertEquals($this->c->getlabel($address), "test label");
   }
 
   public function testCan_connect() {
@@ -137,6 +130,9 @@ class BitcoinClientTest extends PHPUnit_Framework_TestCase {
     $this->c->backupwallet("/tmpqoxxx/wallet.dat");
   }
 
+  /**
+   * @todo Add tests for getbalance(account, minconf)
+   */
   public function testGetbalance() {
     $this->assertInternalType("float", $this->c->getbalance());
   }
@@ -158,10 +154,10 @@ class BitcoinClientTest extends PHPUnit_Framework_TestCase {
   }
 
   public function testSetGetgenerate() {
-    $this->assertEquals($this->c->setgenerate(FALSE, 0), '');
-    $this->assertFalse($this->c->getgenerate());
     $this->assertEquals($this->c->setgenerate(TRUE, 1), '');
     $this->assertTrue($this->c->getgenerate());
+    $this->assertEquals($this->c->setgenerate(FALSE, 0), '');
+    $this->assertFalse($this->c->getgenerate());
   }
 
   public function testGetinfo() {
@@ -250,17 +246,81 @@ class BitcoinClientTest extends PHPUnit_Framework_TestCase {
   }
 
   /**
-   * @todo Implement
+   * @todo Implement?
    */
-  public function stop() {
+  public function testStop() {
     $this->markTestIncomplete();
   }
 
-  public function validateaddress() {
-    $this->assertTrue($this->c->validateaddress('1Kr7USMAgMo7fcPSWsQ7kGL12V3u4sNtjV'));
-    $this->assertTrue($this->c->validateaddress('1F417eczAAbh41V4oLGNf3DqXLY72hsM73'));
-    $this->assertFalse($this->c->validateaddress('1F417eczAAbh41V4oLGNf3DqXLY72hsM7'));
-    $this->assertFalse($this->c->validateaddress('fnordbarbaz'));
+  public function testValidateaddress() {
+	$junk = $this->c->validateaddress('1Kr7USMAgMo7fcPSWsQ7kGL12V3u4sNtjV');
+    $this->assertTrue($junk["isvalid"]);
+    $junk = $this->c->validateaddress('1F417eczAAbh41V4oLGNf3DqXLY72hsM73');
+    $this->assertTrue($junk["isvalid"]);
+    $junk = $this->c->validateaddress('1F417eczAAbh41V4oLGNf3DqXLY72hsM7');
+    $this->assertFalse($junk["isvalid"]);
+    $junk = $this->c->validateaddress('fnordbarbaz');
+    $this->assertFalse($junk["isvalid"]);
   }
+
+  /**
+   * @todo Implement
+   * @since 0.3.18
+   */
+  public function testGettransaction() {
+    $this->markTestIncomplete();
+  }
+
+  /**
+   * @todo Implement
+   * @since 0.3.18
+   */
+  public function testMove() {
+    $this->markTestIncomplete();
+  }
+
+  /**
+   * @todo Implement
+   * @since 0.3.18
+   */
+  public function testSendfrom() {
+    $this->markTestIncomplete();
+  }
+
+  /**
+   * @todo This is a bit weak...
+   * @since 0.3.18
+   */
+  public function testGetwork() {
+    $this->junk = $this->c->getwork();
+    $this->assertArrayHasKey("midstate", $this->junk);
+    $this->assertArrayHasKey("data", $this->junk);
+    $this->assertArrayHasKey("hash1", $this->junk);
+    $this->assertArrayHasKey("target", $this->junk);
+  }
+
+  /**
+   * @todo Implement
+   * @since 0.3.18
+   */
+  public function testGetaccountaddress() {
+    $this->markTestIncomplete();
+  }
+
+  /**
+   * @todo Implement
+   */
+  public function testGethashespersec() {
+    $this->markTestIncomplete();
+  }
+
+  /**
+   * @todo Implement
+   * @since 0.3.18
+   */
+  public function testGetaddressesbyaccount() {
+    $this->markTestIncomplete();
+  }
+
 }
 ?>
