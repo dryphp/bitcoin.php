@@ -641,6 +641,20 @@ class BitcoinClient extends jsonrpc_client {
   }
 
   /**
+   * Return an array that has account names as keys, account balances as
+   * values.
+   *
+   * @return array An array keyed by account name with account balances as
+   *               their values.
+   * @throws BitcoinClientException
+   */
+  public function listaccounts($minconf = 1) {
+   if (!is_numeric($minconf) || $minconf < 0)
+     throw new BitcoinClientException('listreceivedbyaddress requires a numeric minconf >= 0');
+   return $this->query('listaccounts',$minconf);
+  }
+
+  /**
    * Return an array of arrays showing how many Bitcoins have been received by
    * each address in the server's wallet.
    *
