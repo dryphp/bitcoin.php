@@ -665,7 +665,7 @@ class BitcoinClient extends jsonrpc_client {
    *    First transcation number to start from 
    * @return array an of most recent transactions for a given account
    */
-  public function listtransactions($account = NULL,$count = NULL,$from = NULL,) {
+  public function listtransactions($account = NULL,$count = NULL,$from = NULL) {
    
       switch (func_num_args ()) {
           case 0 : return $this->query('listtransactions');
