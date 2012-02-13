@@ -655,6 +655,28 @@ class BitcoinClient extends jsonrpc_client {
   }
 
   /**
+   * Returns up to [count] most recent transactions skipping the first [from] transactions for 
+   * account [account]. If [account] not provided will return recent transaction from all accounts.
+   * 
+   * @param string $account
+   * @param integer $count
+   *    Count records to return
+   * @param integer $from
+   *    First transcation number to start from 
+   * @return array an of most recent transactions for a given account
+   */
+  public function listtransactions($account = NULL,$count = NULL,$from = NULL) {
+   
+      switch (func_num_args ()) {
+          case 0 : return $this->query('listtransactions');
+          case 1 : return $this->query('listtransactions',$account);
+          case 2 : return $this->query('listtransactions',$account,$count);
+          case 3 : return $this->query('listtransactions',$account,$count,$from);
+      }
+  }
+
+
+  /**
    * Return an array of arrays showing how many Bitcoins have been received by
    * each address in the server's wallet.
    *
