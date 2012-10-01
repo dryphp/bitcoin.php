@@ -8,6 +8,9 @@ Documentation
 
 Documentation can be found at [code.gogulski.com](http://code.gogulski.com/).
 
+### New methods (not in documentation):
+* listaccounts() 
+
 Requirements
 ------------
 
@@ -27,6 +30,8 @@ Authors
 
 * [Mike Gogulski](http://github.com/mikegogulski) -
   <http://www.nostate.com/> <http://www.gogulski.com/>
+* [Walter Stanish](http://github.com/globalcitizen) -
+  <http://stani.sh/walter>
 
 Credits
 -------
