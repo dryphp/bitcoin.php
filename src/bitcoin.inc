@@ -78,6 +78,11 @@ class Bitcoin {
   private function decodeBase58($base58) {
     $origbase58 = $base58;
 
+    //only valid chars allowed
+    if (preg_match('/[^1-9A-HJ-NP-Za-km-z]/', $base58)) {
+      return "";
+    }
+
     $return = "0";
     for ($i = 0; $i < strlen($base58); $i++) {
       $current = (string) strpos(Bitcoin::$base58chars, $base58[$i]);
