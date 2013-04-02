@@ -1489,6 +1489,14 @@
 				break;
 			case 2:
 				// array
+				if (array_keys($val) !== range(0, count($val) - 1)) {
+					foreach($val as $key2 => $val2)	{
+						$rs .= ',"'.json_encode_entities($key2, null, $charset_encoding).'":';
+						$rs .= serialize_jsonrpcval($val2, $charset_encoding);
+					}
+				$rs = '{' . substr($rs, 1) . '}';
+				break;
+				}
 				$rs .= "[";
 				$len = sizeof($val);
 				if ($len)

@@ -78,6 +78,11 @@ class Bitcoin {
   private function decodeBase58($base58) {
     $origbase58 = $base58;
 
+    //only valid chars allowed
+    if (preg_match('/[^1-9A-HJ-NP-Za-km-z]/', $base58)) {
+      return "";
+    }
+
     $return = "0";
     for ($i = 0; $i < strlen($base58); $i++) {
       $current = (string) strpos(Bitcoin::$base58chars, $base58[$i]);
@@ -892,6 +897,29 @@ class BitcoinClient extends jsonrpc_client {
     if (!$account || empty($account))
       throw new BitcoinClientException("getaddressesbyaccount requires an account");
     return $this->query("getaddressesbyaccount", $account);
+  }
+
+  /**
+   * Returns Transaction id (txid)
+   *
+   * @param string $fromAccount Account to send from
+   * @param array $sendTo Key=address Value=amount
+   * @param integer $minconf
+   * @param string $comment
+   * @return string Hexadecimal transaction ID on success.
+   * @throws BitcoinClientException
+   * @since 0.3.21
+   * @author codler<github>
+   */
+  public function sendmany($fromAccount, $sendTo, $minconf = 1, $comment=NULL) {
+    if (!$fromAccount || empty($fromAccount))
+      throw new BitcoinClientException("sendmany requires an account");
+    if (!is_numeric($minconf) || $minconf < 0)
+      throw new BitcoinClientException('sendmany requires a numeric minconf >= 0');
+    
+    if (!$comment)
+      return $this->query("sendmany", $fromAccount, $sendTo, $minconf);
+    return $this->query("sendmany", $fromAccount, $sendTo, $minconf, $comment);
   }
 
 }
