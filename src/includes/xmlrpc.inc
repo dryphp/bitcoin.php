@@ -940,6 +940,11 @@
 
 			// initialize user_agent string
 			$this->user_agent = $GLOBALS['xmlrpcName'] . ' ' . $GLOBALS['xmlrpcVersion'];
+
+			if( function_exists('mb_internal_encoding') )
+			{	// Fixes PHP warnings "Converting from  to : not supported..."
+				$this->request_charset_encoding = $GLOBALS['xmlrpc_internalencoding'] = mb_internal_encoding();
+			}
 		}
 
 		/**
