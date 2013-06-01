@@ -418,7 +418,7 @@ class BitcoinClient extends jsonrpc_client {
   public function getbalance($account = NULL, $minconf = 1) {
     if (!is_numeric($minconf) || $minconf < 0)
       throw new BitcoinClientException('getbalance requires a numeric minconf >= 0');
-    if ($account == NULL)
+    if ($account === NULL)
       return $this->query("getbalance");
     return $this->query("getbalance", $account, $minconf);
   }
