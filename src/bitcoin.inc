@@ -901,6 +901,37 @@ class BitcoinClient extends jsonrpc_client {
   }
 
   /**
+   * Returns the list of transactions associated with the given account.
+   *
+   * @param string $account
+   * @return array
+   *    "account" => account of transaction
+   *    "address" => address of transaction
+   *    "category" => 'send' or 'recieve'
+   *    "amount" => Amount sent/recieved
+   *    "fee" => Only on sent transactions, transaction fee taken
+   *    "confirmations" => Confirmations
+   *    "txid" => Transaction ID
+   *    "time" => Time of transaction
+   *    * @throws BitcoinClientException
+   */
+  public function listtransactions($account = false, $count = 10) {
+    if($account) {
+        return $this->query("listtransactions", $account, $count);
+    } else {
+        return $this->query("listtransactions", "*", $count);
+    }
+  }
+
+  /**
+   * Returns the list of accounts.
+   *
+   */
+  public function listaccounts($minconf = 1) {
+    return $this->query("listaccounts", $minconf);
+  }
+
+  /**
    * Returns Transaction id (txid)
    *
    * @param string $fromAccount Account to send from
