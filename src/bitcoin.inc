@@ -796,9 +796,10 @@ class BitcoinClient extends jsonrpc_client {
    * @since 0.3.18
    */
   public function move($fromaccount = "", $toaccount, $amount, $minconf = 1, $comment = NULL) {
-    if (!$fromaccount)
-      $fromaccount = "";
-    if (!$toaccount || empty($toaccount) || !$amount || !is_numeric($amount) || $amount <= 0)
+    if (!$fromaccount) $fromaccount = "";
+    if (!$toaccount) $toaccount = "";
+
+    if (!$amount || !is_numeric($amount) || $amount <= 0)
       throw new BitcoinClientException("move requires a from account, to account and numeric amount > 0");
     if (!is_numeric($minconf) || $minconf < 0)
       throw new BitcoinClientException('move requires a numeric $minconf >= 0');
