@@ -78,6 +78,11 @@ class Bitcoin {
   private function decodeBase58($base58) {
     $origbase58 = $base58;
 
+    //only valid chars allowed
+    if (preg_match('/[^1-9A-HJ-NP-Za-km-z]/', $base58)) {
+      return "";
+    }
+
     $return = "0";
     for ($i = 0; $i < strlen($base58); $i++) {
       $current = (string) strpos(Bitcoin::$base58chars, $base58[$i]);
@@ -413,7 +418,7 @@ class BitcoinClient extends jsonrpc_client {
   public function getbalance($account = NULL, $minconf = 1) {
     if (!is_numeric($minconf) || $minconf < 0)
       throw new BitcoinClientException('getbalance requires a numeric minconf >= 0');
-    if ($account == NULL)
+    if ($account === NULL)
       return $this->query("getbalance");
     return $this->query("getbalance", $account, $minconf);
   }
@@ -791,9 +796,10 @@ class BitcoinClient extends jsonrpc_client {
    * @since 0.3.18
    */
   public function move($fromaccount = "", $toaccount, $amount, $minconf = 1, $comment = NULL) {
-    if (!$fromaccount)
-      $fromaccount = "";
-    if (!$toaccount || empty($toaccount) || !$amount || !is_numeric($amount) || $amount <= 0)
+    if (!$fromaccount) $fromaccount = "";
+    if (!$toaccount) $toaccount = "";
+
+    if (!$amount || !is_numeric($amount) || $amount <= 0)
       throw new BitcoinClientException("move requires a from account, to account and numeric amount > 0");
     if (!is_numeric($minconf) || $minconf < 0)
       throw new BitcoinClientException('move requires a numeric $minconf >= 0');
@@ -892,6 +898,60 @@ class BitcoinClient extends jsonrpc_client {
     if (!$account || empty($account))
       throw new BitcoinClientException("getaddressesbyaccount requires an account");
     return $this->query("getaddressesbyaccount", $account);
+  }
+
+  /**
+   * Returns the list of transactions associated with the given account.
+   *
+   * @param string $account
+   * @return array
+   *    "account" => account of transaction
+   *    "address" => address of transaction
+   *    "category" => 'send' or 'recieve'
+   *    "amount" => Amount sent/recieved
+   *    "fee" => Only on sent transactions, transaction fee taken
+   *    "confirmations" => Confirmations
+   *    "txid" => Transaction ID
+   *    "time" => Time of transaction
+   *    * @throws BitcoinClientException
+   */
+  public function listtransactions($account = false, $count = 10) {
+    if($account) {
+        return $this->query("listtransactions", $account, $count);
+    } else {
+        return $this->query("listtransactions", "*", $count);
+    }
+  }
+
+  /**
+   * Returns the list of accounts.
+   *
+   */
+  public function listaccounts($minconf = 1) {
+    return $this->query("listaccounts", $minconf);
+  }
+
+  /**
+   * Returns Transaction id (txid)
+   *
+   * @param string $fromAccount Account to send from
+   * @param array $sendTo Key=address Value=amount
+   * @param integer $minconf
+   * @param string $comment
+   * @return string Hexadecimal transaction ID on success.
+   * @throws BitcoinClientException
+   * @since 0.3.21
+   * @author codler<github>
+   */
+  public function sendmany($fromAccount, $sendTo, $minconf = 1, $comment=NULL) {
+    if (!$fromAccount || empty($fromAccount))
+      throw new BitcoinClientException("sendmany requires an account");
+    if (!is_numeric($minconf) || $minconf < 0)
+      throw new BitcoinClientException('sendmany requires a numeric minconf >= 0');
+    
+    if (!$comment)
+      return $this->query("sendmany", $fromAccount, $sendTo, $minconf);
+    return $this->query("sendmany", $fromAccount, $sendTo, $minconf, $comment);
   }
 
 }
