@@ -903,7 +903,7 @@ class BitcoinClient extends jsonrpc_client {
   /**
    * Returns the list of transactions associated with the given account.
    *
-   * @param string $account The account to get transactions from, FALSE to get transactions from all accounts
+   * @param string $account The account to get transactions from, or "*" to get transactions from all accounts
    * @param integer $count The number of transactions to return.
    * @param integer $from The start number of transactions.
    * @return array
@@ -950,7 +950,7 @@ class BitcoinClient extends jsonrpc_client {
       throw new BitcoinClientException("sendmany requires an account");
     if (!is_numeric($minconf) || $minconf < 0)
       throw new BitcoinClientException('sendmany requires a numeric minconf >= 0');
-    
+
     if (!$comment)
       return $this->query("sendmany", $fromAccount, $sendTo, $minconf);
     return $this->query("sendmany", $fromAccount, $sendTo, $minconf, $comment);
