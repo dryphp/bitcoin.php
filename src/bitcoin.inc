@@ -903,7 +903,9 @@ class BitcoinClient extends jsonrpc_client {
   /**
    * Returns the list of transactions associated with the given account.
    *
-   * @param string $account
+   * @param string $account The account to get transactions from, FALSE to get transactions from all accounts
+   * @param integer $count The number of transactions to return.
+   * @param integer $from The start number of transactions.
    * @return array
    *    "account" => account of transaction
    *    "address" => address of transaction
@@ -915,12 +917,12 @@ class BitcoinClient extends jsonrpc_client {
    *    "time" => Time of transaction
    *    * @throws BitcoinClientException
    */
-  public function listtransactions($account = false, $count = 10) {
-    if($account) {
-        return $this->query("listtransactions", $account, $count);
-    } else {
-        return $this->query("listtransactions", "*", $count);
-    }
+  public function listtransactions($account, $count = 10, $from = 0) {
+    if (!is_numeric($count) || $count < 0)
+      throw new BitcoinClientException('listtransactions requires a numeric count >= 0');
+    if (!is_numeric($from) || $from < 0)
+      throw new BitcoinClientException('listtransactions requires a numeric from >= 0');
+    return $this->query("listtransactions", $account, $count, $from);
   }
 
   /**
