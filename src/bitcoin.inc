@@ -12,6 +12,7 @@
  * @author Mike Gogulski - http://www.nostate.com/ http://www.gogulski.com/
  * @author theymos - theymos @ http://bitcoin.org/smf
  */
+define('BITCOIN_LIB_ROOT', defined('__DIR__') ? __DIR__ : dirname(__FILE__));
 
 define("BITCOIN_ADDRESS_VERSION", "00");// this is a hex byte
 /**
@@ -21,6 +22,8 @@ define("BITCOIN_ADDRESS_VERSION", "00");// this is a hex byte
  * @author Mike Gogulski
  * 	http://www.gogulski.com/ http://www.nostate.com/
  *  (encapsulation, string abstraction, PHPDoc)
+ * @author sskaje
+ * 	http://sskaje.me/
  */
 class Bitcoin {
 
@@ -39,7 +42,7 @@ class Bitcoin {
    * @return int
    * @access private
    */
-  private function decodeHex($hex) {
+  private static function decodeHex($hex) {
     $hex = strtoupper($hex);
     $return = "0";
     for ($i = 0; $i < strlen($hex); $i++) {
@@ -57,7 +60,7 @@ class Bitcoin {
    * @return string
    * @access private
    */
-  private function encodeHex($dec) {
+  private static function encodeHex($dec) {
     $return = "";
     while (bccomp($dec, 0) == 1) {
       $dv = (string) bcdiv($dec, "16", 0);
@@ -75,7 +78,7 @@ class Bitcoin {
    * @return string
    * @access private
    */
-  private function decodeBase58($base58) {
+  private static function decodeBase58($base58) {
     $origbase58 = $base58;
 
     //only valid chars allowed
@@ -111,7 +114,7 @@ class Bitcoin {
    * @return string
    * @access private
    */
-  private function encodeBase58($hex) {
+  private static function encodeBase58($hex) {
     if (strlen($hex) % 2 != 0) {
       die("encodeBase58: uneven number of hex characters");
     }
@@ -146,9 +149,7 @@ class Bitcoin {
    */
   public static function hash160ToAddress($hash160, $addressversion = BITCOIN_ADDRESS_VERSION) {
     $hash160 = $addressversion . $hash160;
-    $check = pack("H*", $hash160);
-    $check = hash("sha256", hash("sha256", $check, true));
-    $check = substr($check, 0, 8);
+    $check = self::checksum($hash160);
     $hash160 = strtoupper($hash160 . $check);
     return self::encodeBase58($hash160);
   }
@@ -186,9 +187,7 @@ class Bitcoin {
       return false;
     }
     $check = substr($addr, 0, strlen($addr) - 8);
-    $check = pack("H*", $check);
-    $check = strtoupper(hash("sha256", hash("sha256", $check, true)));
-    $check = substr($check, 0, 8);
+    $check = self::checksum($check);
     return $check == substr($addr, strlen($addr) - 8);
   }
 
@@ -199,9 +198,9 @@ class Bitcoin {
    * @return string
    * @access private
    */
-  private function hash160($data) {
-    $data = pack("H*", $data);
-    return strtoupper(hash("ripemd160", hash("sha256", $data, true)));
+  private static function hash160($data) {
+    $data = self::convHex($data);
+    return strtoupper(self::ripemd160(self::sha256($data, true)));
   }
 
   /**
@@ -212,7 +211,7 @@ class Bitcoin {
    * @access public
    */
   public static function pubKeyToAddress($pubkey) {
-    return self::hash160ToAddress($this->hash160($pubkey));
+    return self::hash160ToAddress(self::hash160($pubkey));
   }
 
   /**
@@ -228,15 +227,106 @@ class Bitcoin {
     }
     return $string;
   }
+
+  /**
+   * Convert a Bitcoin private key to WIF(Wallet Import Format)
+   * 
+   * @param string $privKey
+   * @return string
+   * @access public
+   */
+  public static function privKeyToWIF($privKey) {
+    $privKey = '80' . $privKey;
+    $check = self::checksum($privKey);
+    $hex = strtoupper($privKey . $check); 
+    return self::encodeBase58($hex);
+  }
+
+  /**
+   * Convert WIF to Bitcoin private key 
+   * 
+   * @param string $wif 
+   * @param bool $raw
+   * @return string
+   * @exception BitcoinException
+   * @access public
+   */
+  public static function WIFToPrivKey($wif, $raw=false) {
+    $hex = self::decodeBase58($wif);
+    $privKey = substr($hex, 2, -8);
+    $check = substr($hex, -8);
+
+    if (strtoupper(self::checksum('80' . $privKey)) == strtoupper($check)) {
+      if ($raw) {
+        return pack('H*', $privKey);
+      } else {
+        return $privKey;
+      }
+    } 
+    throw new BitcoinException('WIF invalid', 1);
+  }
+
+  /**
+   * Calculate checksum for input hex string
+   * Hex string returned in upper case 
+   *
+   * @param string $in
+   * @return string 
+   * @access private
+   */
+  private static function checksum($in) {
+    $check = self::convHex($in);
+    $check = self::sha256(self::sha256($check, true));
+    $check = substr($check, 0, 8);
+    return strtoupper($check);
+  }
+
+  /**
+   * Check & convert if input key is a human-readable hex string
+   *
+   * @param string $key
+   * @return string
+   * @access private
+   */
+  private static function convHex($key) {
+    if (preg_match('#^[a-f0-9]+$#i', $key)) {
+      $key = pack('H*', $key);
+    }
+    return $key;
+  }
+  /**
+   * SHA-256
+   * 
+   * @param string string
+   * @param bool $raw_output
+   * @return string
+   * @access public
+   */
+  public static function sha256($string, $raw_output=false) {
+    return hash('sha256', $string, $raw_output);
+  }
+  /**
+   * RIPEMD-160
+   * 
+   * @param string string
+   * @param bool $raw_output
+   * @return string
+   * @access public
+   */
+  public static function ripemd160($string, $raw_output=false) {
+    return hash('ripemd160', $string, $raw_output);
+  }
 }
 
 /**
- * Exception class for BitcoinClient
+ * Exception class for Bitcoin
  *
  * @author Mike Gogulski
  * 	http://www.gogulski.com/ http://www.nostate.com/
+ * @author sskaje
+ * 	http://sskaje.me/
  */
-class BitcoinClientException extends ErrorException {
+class BitcoinException extends ErrorException {
   // Redefine the exception so message isn't optional
   public function __construct($message, $code = 0, $severity = E_USER_NOTICE, Exception $previous = null) {
     parent::__construct($message, $code, $severity, $previous);
@@ -247,8 +337,17 @@ class BitcoinClientException extends ErrorException {
   }
 }
 
-require_once(dirname(__FILE__) . "/includes/xmlrpc.inc");
-require_once(dirname(__FILE__) . "/includes/jsonrpc.inc");
+/**
+ * Exception class for BitcoinClient
+ *
+ * @author Mike Gogulski
+ * 	http://www.gogulski.com/ http://www.nostate.com/
+ */
+class BitcoinClientException extends BitcoinException {
+}
+
+require_once(BITCOIN_LIB_ROOT . "/includes/xmlrpc.inc");
+require_once(BITCOIN_LIB_ROOT . "/includes/jsonrpc.inc");
 
 /**
  * Bitcoin client class for access to a Bitcoin server via JSON-RPC-HTTP[S]
