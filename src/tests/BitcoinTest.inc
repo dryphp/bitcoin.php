@@ -49,8 +49,8 @@ class BitcoinTest extends PHPUnit_Framework_TestCase {
    * @todo Implement testPubKeyToAddress().
    */
   public function testPubKeyToAddress() {
-    // Remove the following lines when you implement this test.
-    $this->markTestIncomplete('This test has not been implemented yet.');
+    # examples from https://en.bitcoin.it/wiki/Technical_background_of_version_1_Bitcoin_addresses
+    $this->assertEquals(Bitcoin::pubKeyToAddress('0450863AD64A87AE8A2FE83C1AF1A8403CB53F53E486D8511DAD8A04887E5B23522CD470243453A299FA9E77237716103ABC11A1DF38855ED6F2EE187E9C582BA6'), '16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM');
   }
 
   /**
@@ -60,6 +60,20 @@ class BitcoinTest extends PHPUnit_Framework_TestCase {
   	$this->assertEquals(Bitcoin::remove0x("abcdefg"), "abcdefg");
   	$this->assertEquals(Bitcoin::remove0x("0xabcdefg"), "abcdefg");
   	$this->assertEquals(Bitcoin::remove0x("0Xabcdefg"), "abcdefg");
+  }
+  /**
+   * Test the Bitcoin::privKeyToWIF() 
+   */
+  public function testPrivKeyToWIF() {
+    # examples from https://en.bitcoin.it/wiki/Wallet_import_format
+    $this->assertEquals(Bitcoin::privKeyToWIF("0C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D"), '5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ');
+  }
+  /**
+   * Test the Bitcoin::WIFToPrivKey()
+   */
+  public function testWIFToPrivKey() {
+    # examples from https://en.bitcoin.it/wiki/Wallet_import_format
+    $this->assertEquals(Bitcoin::WIFToPrivKey('5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ'), "0C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D");
   }
 }
 ?>
