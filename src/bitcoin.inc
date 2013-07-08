@@ -302,7 +302,7 @@ class Bitcoin {
    * @return string
    * @access public
    */
-  public function sha256($string, $raw_output=false) {
+  public static function sha256($string, $raw_output=false) {
     return hash('sha256', $string, $raw_output);
   }
   /**
@@ -313,7 +313,7 @@ class Bitcoin {
    * @return string
    * @access public
    */
-  public function ripemd160($string, $raw_output=false) {
+  public static function ripemd160($string, $raw_output=false) {
     return hash('ripemd160', $string, $raw_output);
   }
 }
