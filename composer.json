@@ -1,0 +1,22 @@
+{
+    "name": "yajiedesign/bitcoin-php",
+    "type": "library",
+    "description": "A Bitcoin library for PHP.",
+    "keywords": ["bitcoin", "php"],
+    "homepage": "http://code.gogulski.com.",
+    "license": "UNLICENSE",
+    "authors": [
+        {"name": "mikegogulski", "email": ""}
+    ],
+    "require": {
+        "php": ">=5.3.2"
+    },
+    "autoload": {
+        "psr-0": { "bitcoin\\bitcoinphp": "src/" }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "2.3.x-dev"
+        }
+    }
+}
