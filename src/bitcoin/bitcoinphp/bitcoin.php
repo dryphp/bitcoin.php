@@ -1,4 +1,7 @@
 <?php
+
+namespace bitcoin\bitcoinphp;
+
 /**
  * Bitcoin classes
  *
@@ -16,7 +19,7 @@
 define("BITCOIN_ADDRESS_VERSION", "00");// this is a hex byte
 
 
-namespace bitcoin\\bitcoinphp;
+
 
 /**
  * Bitcoin utility functions class
