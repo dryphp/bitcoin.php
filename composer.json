@@ -3,6 +3,7 @@
     "type": "library",
     "description": "A Bitcoin library for PHP.",
     "keywords": ["bitcoin", "php"],
+	"version": "1.0.1",
     "homepage": "http://code.gogulski.com.",
     "license": "UNLICENSE",
     "authors": [
