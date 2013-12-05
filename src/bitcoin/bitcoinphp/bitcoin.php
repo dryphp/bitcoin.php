@@ -46,7 +46,7 @@ class Bitcoin {
    * @return int
    * @access private
    */
-  private function decodeHex($hex) {
+  private static function decodeHex($hex) {
     $hex = strtoupper($hex);
     $return = "0";
     for ($i = 0; $i < strlen($hex); $i++) {
@@ -64,7 +64,7 @@ class Bitcoin {
    * @return string
    * @access private
    */
-  private function encodeHex($dec) {
+  private static function encodeHex($dec) {
     $return = "";
     while (bccomp($dec, 0) == 1) {
       $dv = (string) bcdiv($dec, "16", 0);
@@ -82,7 +82,7 @@ class Bitcoin {
    * @return string
    * @access private
    */
-  private function decodeBase58($base58) {
+  private static function decodeBase58($base58) {
     $origbase58 = $base58;
 
     //only valid chars allowed
@@ -118,7 +118,7 @@ class Bitcoin {
    * @return string
    * @access private
    */
-  private function encodeBase58($hex) {
+  private static function encodeBase58($hex) {
     if (strlen($hex) % 2 != 0) {
       die("encodeBase58: uneven number of hex characters");
     }
@@ -219,7 +219,7 @@ class Bitcoin {
    * @access public
    */
   public static function pubKeyToAddress($pubkey) {
-    return self::hash160ToAddress($this->hash160($pubkey));
+    return self::hash160ToAddress(self::hash160($pubkey));
   }
 
   /**
@@ -343,7 +343,7 @@ class BitcoinClient extends \jsonrpc_client {
    * @throws none
    * @todo Make this method private.
    */
-  public function query_arg_to_parameter($argument) {
+  public static function query_arg_to_parameter($argument) {
     $type = "";// "string" is encoded as this default type value in xmlrpc.inc
     if (is_numeric($argument)) {
       if (intval($argument) != floatval($argument)) {
