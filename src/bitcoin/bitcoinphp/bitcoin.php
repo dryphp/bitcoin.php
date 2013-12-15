@@ -336,10 +336,10 @@ class BitcoinClient extends \jsonrpc_client {
   }
 
   /**
-   * Convert a Bitcoin server query argument to a jsonrpcval
+   * Convert a Bitcoin server query argument to \jsonrpcval
    *
    * @param mixed $argument
-   * @return jsonrpcval
+   * @return \jsonrpcval
    * @throws none
    * @todo Make this method private.
    */
@@ -362,7 +362,7 @@ class BitcoinClient extends \jsonrpc_client {
       $type = "double";
     if (is_array($argument))
       $type = "array";
-    return new jsonrpcval($argument, $type);
+    return new \jsonrpcval($argument, $type);
   }
 
   /**
