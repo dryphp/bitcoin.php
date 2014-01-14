@@ -18,7 +18,7 @@ class Transaction
 
   public function __construct(BitcoinClient $client, $txid)
   {
-    $info = $client->gettransaction($txid);
+    $info = $client->getTransaction($txid);
 
     foreach ($info as $key => $value) {
       $this->$key = $value;

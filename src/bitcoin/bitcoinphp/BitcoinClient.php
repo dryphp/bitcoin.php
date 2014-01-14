@@ -2,715 +2,756 @@
 
 namespace bitcoin\bitcoinphp;
 
-require_once(dirname(__FILE__) . "/includes/xmlrpc.inc");
-require_once(dirname(__FILE__) . "/includes/jsonrpc.inc");
+use Graze\Guzzle\JsonRpc\JsonRpcClientInterface;
 
-/**
- * Bitcoin client class for access to a Bitcoin server via JSON-RPC-HTTP[S]
- *
- * Implements the methods documented at https://www.bitcoin.org/wiki/doku.php?id=api
- *
- * @version 0.3.19
- * @author Mike Gogulski
- * 	http://www.gogulski.com/ http://www.nostate.com/
- */
-class BitcoinClient extends \jsonrpc_client {
 
+class BitcoinClient {
+
+  private $client;
+
+  public function __construct(JsonRpcClientInterface $client) {
+    $this->client = $client;
+    $this->getInfo();
+  }
+  
+  public function request($method, $params = array()) {
+    return $this->client->request($method, 1, $params)->send()->getResult();
+  }
+  
   /**
-   * Create a jsonrpc_client object to talk to the bitcoin server and return it,
-   * or false on failure.
+   * Adds a nrequired-to-sign multisignature address to the wallet.
    *
-   * @param string $scheme
-   * 	"http" or "https"
-   * @param string $username
-   * 	User name to use in connection the Bitcoin server's JSON-RPC interface
-   * @param string $password
-   * 	Server password
-   * @param string $address
-   * 	Server hostname or IP address
-   * @param mixed $port
-   * 	Server port (string or integer)
-   * @param string $certificate_path
-   * 	Path on the local filesystem to server's PEM certificate (ignored if $scheme != "https")
-   * @param integer $debug_level
-   * 	0 (default) = no debugging;
-   * 	1 = echo JSON-RPC messages received to stdout;
-   * 	2 = log transmitted messages also
-   * @return jsonrpc_client
-   * @access public
-   * @throws BitcoinClientException
+   * Each key is a bitcoin address or hex-encoded public key. If $account is
+   * specified, assigns address to $account.
+   *
+   * @param $nrequired
+   * @param $keys
+   * @param $account
+   *
+   * @command addmultisigaddress
    */
-  public function __construct($scheme, $username, $password, $address = "localhost", $port = 8332, $certificate_path = '', $debug_level = 0) {
-    $scheme = strtolower($scheme);
-    if ($scheme != "http" && $scheme != "https")
-      throw new BitcoinClientException("Scheme must be http or https");
-    if (empty($username))
-      throw new BitcoinClientException("Username must be non-blank");
-    if (empty($password))
-      throw new BitcoinClientException("Password must be non-blank");
-    $port = (string) $port;
-    if (!$port || empty($port) || !is_numeric($port) || $port < 1 || $port > 65535 || floatval($port) != intval($port))
-      throw new BitcoinClientException("Port must be an integer and between 1 and 65535");
-    if (!empty($certificate_path) && !is_readable($certificate_path))
-      throw new BitcoinClientException("Certificate file " . $certificate_path . " is not readable");
-    $uri = $scheme . "://" . $username . ":" . $password . "@" . $address . ":" . $port . "/";
-    parent::__construct($uri);
-    $this->setDebug($debug_level);
-    $this->setSSLVerifyHost(0);
-    if ($scheme == "https")
-      if (!empty($certificate_path))
-        $this->setCaCertificate($certificate_path);
-      else
-        $this->setSSLVerifyPeer(false);
+  public function addMultiSigAddress($nrequired, $keys, $account = NULL) {
+    $this->request('addmultisigaddress', array($nrequired, $keys, $account));
+  }
+  
+  /**
+   * Attempts add or remove $node from the addnode list or try a connection to
+   * $node once.
+   *
+   * @param $node
+   * @param $type
+   *   add/remove/onetry
+   *
+   * @command addnode
+   * @requires version 0.8
+   */
+  public function addNode($node, $type) {
+    $this->request('addnode', array($node, $type));
   }
 
   /**
-   * Test if the connection to the Bitcoin JSON-RPC server is working
+   * Safely copies wallet.dat to destination, which can be a directory or a path
+   * with filename.
    *
-   * The check is done by calling the server's getinfo() method and checking
-   * for a fault.
+   * @param <destination>
    *
-   * @return mixed boolean TRUE if successful, or a fault string otherwise
-   * @access public
-   * @throws none
+   * @command backupwallet
    */
-  public function can_connect() {
-    try {
-      $r = $this->getinfo();
-    } catch (BitcoinClientException $e) {
-      return $e->getMessage();
-    }
-    return true;
+  public function backupWallet($destination) {
+    $this->request('backupwallet', array($destination));
   }
 
   /**
-   * Convert a Bitcoin server query argument to \jsonrpcval
+   * Creates a multi-signature address and returns a json object.
    *
-   * @param mixed $argument
-   * @return \jsonrpcval
-   * @throws none
-   * @todo Make this method private.
+   * @param $nrequired
+   * @param $keys
+   *
+   * @command createmultisig
    */
-  public static function query_arg_to_parameter($argument) {
-    $type = "";// "string" is encoded as this default type value in xmlrpc.inc
-    if (is_numeric($argument)) {
-      if (intval($argument) != floatval($argument)) {
-        $argument = floatval($argument);
-        $type = "double";
-      } else {
-        $argument = intval($argument);
-        $type = "int";
-      }
-    }
-    if (is_bool($argument))
-      $type = "boolean";
-    if (is_int($argument))
-      $type = "int";
-    if (is_float($argument))
-      $type = "double";
-    if (is_array($argument))
-      $type = "array";
-    return new \jsonrpcval($argument, $type);
+  public function createMultiSig($nrequired, $keys) {
+    return $this->request('createmultisig', array($nrequired, $keys));
   }
 
   /**
-   * Send a JSON-RPC message and optional parameter arguments to the server.
+   * Creates a raw transaction spending given inputs.
    *
-   * Use the API functions if possible. This method remains public to support
-   * changes being made to the API before this libarary can be updated.
+   * @param $inputs
+   *   [{"txid":txid,"vout":n},...]
+   * @param $outputs
+   *   {address:amount,...}
    *
-   * @param string $message
-   * @param mixed $args, ...
-   * @return mixed
-   * @throws BitcoinClientException
-   * @see xmlrpc.inc:php_xmlrpc_decode()
+   * @requires version 0.7
+   * @command createrawtransaction
    */
-  public function query($message) {
-    if (!$message || empty($message))
-      throw new BitcoinClientException("Bitcoin client query requires a message");
-    $msg = new \jsonrpcmsg($message);
-    if (func_num_args() > 1) {
-      for ($i = 1; $i < func_num_args(); $i++) {
-        $msg->addParam(self::query_arg_to_parameter(func_get_arg($i)));
-      }
-    }
-    $response = $this->send($msg);
-    if ($response->faultCode()) {
-      throw new BitcoinClientException($response->faultString());
-    }
-    return php_xmlrpc_decode($response->value());
-  }
-
-  /*
-   * The following functions implement the Bitcoin RPC API as documented at https://www.bitcoin.org/wiki/doku.php?id=api
-   */
-
-  /**
-   * Safely copies wallet.dat to destination, which can be a directory or
-   * a path with filename.
-   *
-   * @param string $destination
-   * @return mixed Nothing, or an error array
-   * @throws BitcoinClientException
-   */
-  public function backupwallet($destination) {
-    if (!$destination || empty($destination))
-      throw new BitcoinClientException("backupwallet requires a destination");
-    return $this->query("backupwallet", $destination);
+  public function createRawTransaction($inputs, $outputs) {
+    return $this->request('createrawtransaction', array($inputs, $outputs));
   }
 
   /**
-   * Returns the server's available balance, or the balance for $account with
-   * at least $minconf confirmations.
+   * Produces a human-readable JSON object for a raw transaction.
    *
-   * @param string $account Account to check. If not provided, the server's
-   *  total available balance is returned.
-   * @param integer $minconf If specified, only transactions with at least
-   *  $minconf confirmations will be included in the returned total.
-   * @return float Bitcoin balance
-   * @throws BitcoinClientException
+   * @param $raw_transaction
+   *   <hex string>
+   *
+   * @command decoderawtransaction
+   * @requires version 0.7
    */
-  public function getbalance($account = NULL, $minconf = 1) {
-    if (!is_numeric($minconf) || $minconf < 0)
-      throw new BitcoinClientException('getbalance requires a numeric minconf >= 0');
-    if ($account === NULL)
-      return $this->query("getbalance");
-    return $this->query("getbalance", $account, $minconf);
+  public function decodeRawTransaction($raw_transaction) {
+    return $this->request('decoderawtransaction', array($raw_transaction));
   }
 
   /**
+   * Reveals the private key corresponding to an address.
+   *
+   * @param $address
+   *
+   * @command dumpprivkey
+   * @requires Unlocked wallet
+   */
+  public function dumpPrivKey($address) {
+    return $this->request('dumpprivkey', array($address));
+  }
+
+  /**
+   * Encrypts the wallet with a passphrase.
+   *
+   * @param $passphrase
+   *
+   * @command encryptwallet
+   */
+  public function encryptWallet($passphrase) {
+    return $this->request('encryptwallet', array($passphrase));
+  }
+
+  /**
+   * Returns the account associated with an address.
+   *
+   * @param $address
+   *
+   * @command getaccount
+   */
+  public function getAccount($address) {
+    return $this->request('getaccount', array($address));
+  }
+
+  /**
+   * Returns the current bitcoin address for receiving payments to an account.
+   *
+   * @param $account
+   *
+   * @command getaccountaddress
+   */
+  public function getAccountAddress($account) {
+    return $this->request('getaccountaddress', array($account));
+  }
+
+  /**
+   * getaddednodeinfo
+   *
+   * @param <dns>
+   * @param [node]
+   *
+   * version 0.8 Returns information about the given added node, or all added
+   * nodes (note that onetry addnodes are not listed here) If dns is false, only
+   * a list of added nodes will be provided, otherwise connected information
+   * will also be available.
+   */
+  public function getAddedNodeInfo($dns, $node = NULL) {
+    return $this->request('getaddednodeinfo', array($dns, $node));
+  }
+
+  /**
+   * getaddressesbyaccount
+   *
+   * @param $account
+   *
+   * Returns the list of addresses for the given account.
+   */
+  public function getAddressesByAccount($account) {
+    return $this->request('getaddressesbyaccount', array($account));
+  }
+
+  /**
+   * getbalance
+   *
+   * @param $account
+   * @param $minconf
+   *
+   * If [account] is not specified, returns the server's total available
+   * balance. If [account] is specified, returns the balance in the account.
+   */
+  public function getBalance($account = NULL, $minconf = 1) {
+    return $this->request('getbalance', array($account, $minconf));
+  }
+
+  /**
+   * getbestblockhash
+   *
+   * recent git checkouts only Returns the hash of the best (tip) block in the
+   * longest block chain.
+   */
+  public function getBestBlockHash() {
+    return $this->request('getbestblockhash');
+  }
+
+  /**
+   * getblock
+   *
+   * @param $hash
+   *
+   * Returns information about the block with the given hash.
+   */
+  public function getBlock($hash) {
+    return $this->request('getblock', array($hash));
+  }
+
+  /**
+   * getblockcount
+   *
    * Returns the number of blocks in the longest block chain.
-   *
-   * @return integer Current block count
-   * @throws BitcoinClientException
    */
-  public function getblockcount() {
-    return $this->query("getblockcount");
+  public function getBlockCount() {
+    return $this->request('getblockcount');
   }
 
   /**
-   * Returns the block number of the latest block in the longest block chain.
+   * getblockhash
    *
-   * @return integer Block number
-   * @throws BitcoinClientException
+   * @param $index
+   *
+   * Returns hash of block in best-block-chain at <index>; index 0 is the
+   * genesis block
    */
-  public function getblocknumber() {
-    return $this->query("getblocknumber");
+  public function getBlockHash($index) {
+    return $this->request('getblockhash', array($index));
   }
 
   /**
+   * getblocktemplate
+   *
+   * @param $params
+   *
+   * Returns data needed to construct a block to work on. See BIP_0022 for more
+   * info on params.
+   */
+  public function getBlockTemplate($params) {
+    return $this->request('getblocktemplate', array($params));
+  }
+
+  /**
+   * getconnectioncount
+   *
    * Returns the number of connections to other nodes.
-   *
-   * @return integer Connection count
-   * @throws BitcoinClientException
    */
-  public function getconnectioncount() {
-    return $this->query("getconnectioncount");
+  public function getConnectionCount() {
+    return $this->request('getconnectioncount');
   }
 
   /**
-   * Returns the proof-of-work difficulty as a multiple of the minimum difficulty.
+   * getdifficulty
    *
-   * @return float Difficulty
-   * @throws BitcoinClientException
+   * Returns the proof-of-work difficulty as a multiple of the minimum
+   * difficulty.
    */
-  public function getdifficulty() {
-    return $this->query("getdifficulty");
+  public function getDifficulty() {
+    return $this->request('getdifficulty');
   }
 
   /**
-   * Returns boolean true if server is trying to generate bitcoins, false otherwise.
+   * getgenerate
    *
-   * @return boolean Generation status
-   * @throws BitcoinClientException
+   * Returns true or false whether bitcoind is currently generating hashes.
    */
-  public function getgenerate() {
-    return $this->query("getgenerate");
+  public function getGenerate() {
+    return $this->request('getgenerate');
   }
 
   /**
-   * Tell Bitcoin server to generate Bitcoins or not, and how many processors
-   * to use.
+   * gethashespersec
    *
-   * @param boolean $generate
-   * @param integer $maxproc
-   * 	Limit generation to $maxproc processors, unlimited if -1
-   * @return mixed Nothing if successful, error array if not
-   * @throws BitcoinClientException
+   * Returns a recent hashes per second performance measurement while
+   * generating.
    */
-  public function setgenerate($generate = TRUE, $maxproc = -1) {
-    if (!is_numeric($maxproc) || $maxproc < -1)
-      throw new BitcoinClientException('setgenerate: $maxproc must be numeric and >= -1');
-    return $this->query("setgenerate", $generate, $maxproc);
+  public function getHashesPerSec() {
+    return $this->request('gethashespersec');
   }
 
   /**
-   * Returns an array containing server information.
+   * getinfo
    *
-   * @return array Server information
-   * @throws BitcoinClientException
+   * Returns an object containing various state info.
    */
-  public function getinfo() {
-    return $this->query("getinfo");
+  public function getInfo() {
+    return $this->request('getinfo');
   }
 
   /**
-   * Returns the account associated with the given address.
+   * getmininginfo
    *
-   * @param string $address
-   * @return string Account
-   * @throws BitcoinClientException
-   * @since 0.3.17
+   * Returns an object containing mining-related information:
+   *   - blocks
+   *   - currentblocksize
+   *   - currentblocktx
+   *   - difficulty
+   *   - errors
+   *   - generate
+   *   - genproclimit
+   *   - hashespersec
+   *   - pooledtx
+   *   - testnet 
+   *
+   * N
    */
-  public function getaccount($address) {
-    if (!$address || empty($address))
-      throw new BitcoinClientException("getaccount requires an address");
-    return $this->query("getaccount", $address);
+  public function getMiningInfo() {
+    return $this->request('getmininginfo');
   }
 
   /**
-   * Returns the label associated with the given address.
+   * getnewaddress
    *
-   * @param string $address
-   * @return string Label
-   * @throws BitcoinClientException
-   * @deprecated Since 0.3.17
+   * @param $account
+   *
+   * Returns a new bitcoin address for receiving payments. If [account] is
+   * specified (recommended), it is added to the address book so payments
+   * received with the address will be credited to [account].
    */
-  public function getlabel($address) {
-    if (!$address || empty($address))
-      throw new BitcoinClientException("getlabel requires an address");
-    return $this->query("getlabel", $address);
+  public function getNewAddress($account = NULL) {
+    return $this->request('getnewaddress', $account);
   }
 
   /**
-   * Sets the account associated with the given address.
-   * $account may be omitted to remove an account from an address.
+   * getpeerinfo
    *
-   * @param string $address
-   * @param string $account
-   * @return NULL
-   * @throws BitcoinClientException
-   * @since 0.3.17
+   * version 0.7 Returns data about each connected node.
    */
-  public function setaccount($address, $account = "") {
-    if (!$address || empty($address))
-      throw new BitcoinClientException("setaccount requires an address");
-    return $this->query("setaccount", $address, $account);
+  public function getPeerInfo() {
+    return $this->request('getpeerinfo');
   }
 
   /**
-   * Sets the label associated with the given address.
-   * $label may be omitted to remove a label from an address.
+   * getrawchangeaddress
    *
-   * @param string $address
-   * @param string $label
-   * @return NULL
-   * @throws BitcoinClientException
-   * @deprecated Since 0.3.17
+   * @param $account
+   *
+   * recent git checkouts only Returns a new Bitcoin address, for receiving
+   * change. This is for use with raw transactions, NOT normal use. 	Y
    */
-  public function setlabel($address, $label = "") {
-    if (!$address || empty($address))
-      throw new BitcoinClientException("setlabel requires an address");
-    return $this->query("setlabel", $address, $label);
+  public function getRawChangeAddress($account = NULL) {
+    return $this->request('getrawchangeaddress', array($account));
   }
 
   /**
-   * Returns a new bitcoin address for receiving payments.
+   * getrawmempool
    *
-   * If $account is specified (recommended), it is added to the address book so
-   * payments received with the address will be credited to $account.
-   *
-   * @param string $account Label to apply to the new address
-   * @return string Bitcoin address
-   * @throws BitcoinClientException
+   * version 0.7 Returns all transaction ids in memory pool
    */
-  public function getnewaddress($account = NULL) {
-    if (!$account || empty($account))
-      return $this->query("getnewaddress");
-    return $this->query("getnewaddress", $account);
+  public function getRawMemPool() {
+    return $this->request('getrawmempool');
   }
 
   /**
-   * Returns the total amount received by $address in transactions with at least
-   * $minconf confirmations.
+   * getrawtransaction
    *
-   * @param string $address
-   * 	Bitcoin address
-   * @param integer $minconf
-   * 	Minimum number of confirmations for transactions to be counted
-   * @return float Bitcoin total
-   * @throws BitcoinClientException
+   * @param $txid
+   * @param $verbose
+   *
+   * version 0.7 Returns raw transaction representation for given transaction
+   * id.
    */
-  public function getreceivedbyaddress($address, $minconf = 1) {
-    if (!is_numeric($minconf) || $minconf < 0)
-      throw new BitcoinClientException('getreceivedbyaddress requires a numeric minconf >= 0');
-    if (!$address || empty($address))
-      throw new BitcoinClientException("getreceivedbyaddress requires an address");
-    return $this->query("getreceivedbyaddress", $address, $minconf);
+  public function getRawTransaction($txid, $verbose = 0) {
+    return $this->request('getrawtransaction', array($txid, $verbose));
   }
 
   /**
-   * Returns the total amount received by addresses associated with $account
-   * in transactions with at least $minconf confirmations.
+   * getreceivedbyaccount
    *
-   * @param string $account
-   * @param integer $minconf
-   * 	Minimum number of confirmations for transactions to be counted
-   * @return float Bitcoin total
-   * @throws BitcoinClientException
-   * @since 0.3.17
+   * @param $account
+   * @param $minconf
+   *
+   * Returns the total amount received by addresses with [account] in
+   * transactions with at least [minconf] confirmations. If [account] not
+   * provided return will include all transactions to all accounts.
+   * (version 0.3.24)
    */
-  public function getreceivedbyaccount($account, $minconf = 1) {
-    if (!is_numeric($minconf) || $minconf < 0)
-      throw new BitcoinClientException('getreceivedbyaccount requires a numeric minconf >= 0');
-    if (!$account || empty($account))
-      throw new BitcoinClientException("getreceivedbyaccount requires an account");
-    return $this->query("getreceivedbyaccount", $account, $minconf);
+  public function getReceivedByAccount($account = NULL, $minconf = 1) {
+    return $this->request('getreceivedbyaccount', array($account, $minconf));
   }
 
   /**
-   * Returns the total amount received by addresses with $label in
-   * transactions with at least $minconf confirmations.
+   * getreceivedbyaddress
    *
-   * @param string $label
-   * @param integer $minconf
-   * 	Minimum number of confirmations for transactions to be counted
-   * @return float Bitcoin total
-   * @throws BitcoinClientException
-   * @deprecated Since 0.3.17
+   * @param $address
+   * @param $minconf
+   *
+   * Returns the amount received by <bitcoinaddress> in transactions with at
+   * least [minconf] confirmations. It correctly handles the case where someone
+   * has sent to the address in multiple transactions. Keep in mind that
+   * addresses are only ever used for receiving transactions. Works only for
+   * addresses in the local wallet, external addresses will always show 0.
    */
-  public function getreceivedbylabel($label, $minconf = 1) {
-    if (!is_numeric($minconf) || $minconf < 0)
-      throw new BitcoinClientException('getreceivedbylabel requires a numeric minconf >= 0');
-    if (!$label || empty($label))
-      throw new BitcoinClientException("getreceivedbylabel requires a label");
-    return $this->query("getreceivedbylabel", $label, $minconf);
+  public function getReceivedByAddress($address, $minconf = 1) {
+    return $this->request('getreceivedbyaddress', array($address, $minconf));
   }
 
   /**
-   * Return a list of server RPC commands or help for $command, if specified.
+   * gettransaction
    *
-   * @param string $command
-   * @return string Help text
-   * @throws BitcoinClientException
+   * @param $txid
+   *
+   * Returns an object about the given transaction containing:
+
+    "amount" : total amount of the transaction
+    "confirmations" : number of confirmations of the transaction
+    "txid" : the transaction ID
+    "time" : time associated with the transaction[1].
+    "details" - An array of objects containing:
+        "account"
+        "address"
+        "category"
+        "amount"
+        "fee" 
+
+	N
+   */
+  public function getTransaction($txid) {
+    return $this->request('gettransaction', array($txid));
+  }
+
+  /**
+   * gettxout
+   * 
+   * @param $txid
+   * @param $n
+   * @param $includemempool
+   *
+   * Returns details about an unspent transaction output (UTXO)
+   */
+  public function getTxOut($txid, $n, $includemempool = TRUE) {
+    return $this->request('gettxout', array($txid, $n, $includemempool));
+  }
+
+  /**
+   * gettxoutsetinfo
+   *
+   * Returns statistics about the unspent transaction output (UTXO) set
+   */
+  public function getTxOutSetInfo() {
+    return $this->request('gettxoutsetinfo');
+  }
+
+  /**
+   * getwork
+   *
+   * $data
+   *
+   * If [data] is not specified, returns formatted hash data to work on:
+
+    "midstate" : precomputed hash state after hashing the first half of the data
+    "data" : block data
+    "hash1" : formatted hash buffer for second hash
+    "target" : little endian hash target 
+
+If [data] is specified, tries to solve the block and returns true if it was successful.
+	N
+   */
+  public function getWork($data = NULL) {
+    return $this->request('getwork', array($data));
+  }
+
+  /**
+   * help
+   *
+   * [command]
+   *
+   * List commands, or get help for a command.
    */
   public function help($command = NULL) {
-    if (!$command || empty($command))
-      return $this->query("help");
-    return $this->query("help", $command);
+    return $this->request('help');
   }
 
   /**
-   * Return an array of arrays showing how many Bitcoins have been received by
-   * each address in the server's wallet.
+   * importprivkey
    *
-   * @param integer $minconf Minimum number of confirmations before payments are included.
-   * @param boolean $includeempty Whether to include addresses that haven't received any payments.
-   * @return array An array of arrays. The elements are:
-   * 	"address" => receiving address
-   * 	"account" => the account of the receiving address
-   * 	"amount" => total amount received by the address
-   * 	"confirmations" => number of confirmations of the most recent transaction included
-   * @throws BitcoinClientException
+   * @param $privkey
+   * @param $label
+   * @parma $rescan
+   *
+   * Adds a private key (as returned by dumpprivkey) to your wallet. This may
+   * take a while, as a rescan is done, looking for existing transactions.
+   * Optional [rescan] parameter added in 0.8.0. 	Y
    */
-  public function listreceivedbyaddress($minconf = 1, $includeempty = FALSE) {
-    if (!is_numeric($minconf) || $minconf < 0)
-      throw new BitcoinClientException('listreceivedbyaddress requires a numeric minconf >= 0');
-    return $this->query("listreceivedbyaddress", $minconf, $includeempty);
+  public function importPrivKey($privkey, $label = NULL, $rescan = TRUE) {
+    $this->request('importprivkey', array($privkey, $label, $rescan));
   }
 
   /**
-   * Return an array of arrays showing how many Bitcoins have been received by
-   * each account in the server's wallet.
+   * keypoolrefill
    *
-   * @param integer $minconf
-   * 	Minimum number of confirmations before payments are included.
-   * @param boolean $includeempty
-   * 	Whether to include addresses that haven't received any payments.
-   * @return array An array of arrays. The elements are:
-   * 	"account" => the label of the receiving address
-   * 	"amount" => total amount received by the address
-   * 	"confirmations" => number of confirmations of the most recent transaction included
-   * @throws BitcoinClientException
-   * @since 0.3.17
+   * Fills the keypool, requires wallet passphrase to be set. 	Y
    */
-  public function listreceivedbyaccount($minconf = 1, $includeempty = FALSE) {
-    if (!is_numeric($minconf) || $minconf < 0)
-      throw new BitcoinClientException('listreceivedbyaccount requires a numeric minconf >= 0');
-    return $this->query("listreceivedbyaccount", $minconf, $includeempty);
+  public function keypoolRefill() {
+    $this->request('keypoolrefill');
   }
 
   /**
-   * Return an array of arrays showing how many Bitcoins have been received by
-   * each label in the server's wallet.
+   * listaccounts
    *
-   * @param integer $minconf Minimum number of confirmations before payments are included.
-   * @param boolean $includeempty Whether to include addresses that haven't received any payments.
-   * @return array An array of arrays. The elements are:
-   * 	"label" => the label of the receiving address
-   * 	"amount" => total amount received by the address
-   * 	"confirmations" => number of confirmations of the most recent transaction included
-   * @throws BitcoinClientException
-   * @deprecated Since 0.3.17
+   * @param $minconf
+   *
+   * Returns Object that has account names as keys, account balances as values.
+   * N
    */
-  public function listreceivedbylabel($minconf = 1, $includeempty = FALSE) {
-    if (!is_numeric($minconf) || $minconf < 0)
-      throw new BitcoinClientException('listreceivedbylabel requires a numeric minconf >= 0');
-    return $this->query("listreceivedbylabel", $minconf, $includeempty);
+  public function listAccounts($minconf = 1) {
+    return $this->request('listaccounts', array($minconf));
   }
 
   /**
-   * Send amount from the server's available balance.
+   * Returns all addresses in the wallet and info used for coincontrol.
    *
-   * $amount is a real and is rounded to the nearest 0.01. Returns string "sent" on success.
+   * listaddressgroupings
    *
-   * @param string $address Destination Bitcoin address or IP address
-   * @param float $amount Amount to send. Will be rounded to the nearest 0.01.
-   * @param string $comment
-   * @param string $comment_to
-   * @return string Hexadecimal transaction ID on success.
-   * @throws BitcoinClientException
-   * @todo Document the comment arguments better.
+   * version 0.7 
    */
-  public function sendtoaddress($address, $amount, $comment = NULL, $comment_to = NULL) {
-    if (!$address || empty($address))
-      throw new BitcoinClientException("sendtoaddress requires a destination address");
-    if (!$amount || empty($amount))
-      throw new BitcoinClientException("sendtoaddress requires an amount to send");
-    if (!is_numeric($amount) || $amount <= 0)
-      throw new BitcoinClientException("sendtoaddress requires the amount sent to be a number > 0");
-    $amount = floatval($amount);
-    if (!$comment && !$comment_to)
-      return $this->query("sendtoaddress", $address, $amount);
-    if (!$comment_to)
-      return $this->query("sendtoaddress", $address, $amount, $comment);
-    return $this->query("sendtoaddress", $address, $amount, $comment, $comment_to);
+  public function listAddressGroupings() {
+    return $this->request('listaddressgroupings');
   }
 
   /**
-   * Stop the Bitcoin server.
+   * listreceivedbyaccount
    *
-   * @throws BitcoinClientException
+   * @param $minconf
+   * @param $includeempty
+   *
+   * @return 	Returns an array of objects containing:
+
+    "account" : the account of the receiving addresses
+    "amount" : total amount received by addresses with this account
+    "confirmations" : number of confirmations of the most recent transaction included 
+
+	N
+   */
+  public function listReceivedByAccount($minconf = 1, $includeempty = FALSE) {
+    return $this->request('listreceivedbyaccount', array($minconf, $includeempty));
+  }
+
+  /**
+   * listreceivedbyaddress
+   *
+   * @param $minconf
+   * @param $includeempty
+   *
+   * @return An array of objects containing:
+
+    "address" : receiving address
+    "account" : the account of the receiving address
+    "amount" : total amount received by the address
+    "confirmations" : number of confirmations of the most recent transaction included 
+
+To get a list of accounts on the system, execute bitcoind listreceivedbyaddress 0 true
+	N
+   */
+  public function listReceivedByAddress($minconf = 1, $includeempty = FALSE) {
+    return $this->request('listreceivedbyaddress', array($minconf, $includeempty));
+  }
+
+  /**
+   * Get all transactions in blocks since block [blockhash], or all transactions
+   * if omitted.
+   *
+   * listsinceblock
+   *
+   * @param $blockhash
+   * @param $target_confirmations
+   *   Ignored (bug) up to (at least) v0.8.5
+   *
+   * N
+   */
+  public function listSinceBlock($blockhash = NULL, $target_confirmations = NULL) {
+    return $this->request('listsinceblock', array($blockhash , $target_confirmations));
+  }
+
+  /**
+   * listtransactions
+   *
+   * $param $account
+   * $param $count
+   * $param $from
+   *
+   * Returns up to [count] most recent transactions skipping the first [from]
+   * transactions for account [account]. If [account] not provided will return
+   * recent transaction from all accounts.
+   */
+  public function listTransactions($account = NULL, $count = 10, $from = 0) {
+    return $this->request('listtransactions', array($account, $count, $from));
+  }
+
+  /**
+   * Returns array of unspent transaction inputs in the wallet.
+   *
+   * listunspent
+   *
+   * @param $minconf
+   * @param $maxconf
+   *
+   * @requires version 0.7
+   * N
+   */
+  public function listUnspent($minconf = 1, $maxconf = 999999) {
+    return $this->request('listunspent', array($minconf, $maxconf));
+  }
+
+  /**
+   * Returns list of temporarily unspendable outputs.
+   *
+   * listlockunspent
+   * @requires version 0.8 
+   */
+  public function listLockUnspent() {
+    return $this->request('listlockunspent');
+  }
+
+  /**
+   * Updates list of temporarily unspendable outputs.
+   *
+   * $param $unlock
+   * $param $outputs
+   *
+   * lockunspent
+   * @requires version 0.8
+   */
+  public function lockUnspent($unlock, $outputs) {
+    $this->request('lockunspent', array($unlock, $outputs));
+  }
+
+  /**
+   * Moves from one account in your wallet to another.
+   *
+   * @param $fromaccount
+   * @param $toaccount
+   * @param $amount
+   * @param $minconf
+   * @param $comment
+   *
+   *
+   
+   * @command move
+   */
+  public function move($from_account, $to_account, $amount, $minconf = 1, $comment = NULL) {
+    $this->request('move', array($from_account, $to_account, $amount, $minconf, $comment));
+  }
+
+  /**
+   * sendfrom 	<fromaccount> <tobitcoinaddress> <amount> [minconf=1] [comment] [comment-to] 	<amount> is a real and is rounded to 8 decimal places. Will send the given amount to the given address, ensuring the account has a valid balance using [minconf] confirmations. Returns the transaction ID if successful (not in JSON object). 	Y
+   */
+  public function sendFrom($from_account, $to_address, $amount, $minconf = 1, $comment = NULL, $comment_to = NULL) {
+    return $this->request('sendfrom', array($from_account, $to_address, $amount, $minconf, $comment, $comment_to));
+  }
+
+  /**
+   * sendmany 	<fromaccount> {address:amount,...} [minconf=1] [comment] 	amounts are double-precision floating point numbers 	Y
+   */
+  public function sendMany($from_account, $addresses, $minconf = 1, $comment = NULL) {
+    return $this->request('sendmany', array($from_account, $addresses, $minconf, $comment));
+  }
+
+  /**
+   * sendrawtransaction 	<hexstring> 	version 0.7 Submits raw transaction (serialized, hex-encoded) to local node and network.
+   */
+  public function sendRawTransaction($raw_transaction) {
+    $this->request('sendrawtransaction', array($raw_transaction));
+  }
+
+  /**
+   * sendtoaddress 	<bitcoinaddress> <amount> [comment] [comment-to] 	<amount> is a real and is rounded to 8 decimal places. Returns the transaction ID <txid> if successful. 	Y
+   */
+  public function sendToAddress($address, $amount, $comment = NULL, $comment_to = NULL) {
+    return $this->request('sendtoaddress', array($address, $amount, $comment, $comment_to));
+  }
+
+  /**
+   * setaccount 	<bitcoinaddress> <account> 	Sets the account associated with the given address. Assigning address that is already assigned to the same account will create a new address associated with that account.
+   */
+  public function setAccount($address, $amount) {
+    $this->request('setaccount', array($address, $amount));
+  }
+
+  /**
+   * setgenerate 	<generate> [genproclimit] 	<generate> is true or false to turn generation on or off.
+Generation is limited to [genproclimit] processors, -1 is unlimited.
+   */
+  public function setGenerate($generate, $gen_proc_limit = NULL) {
+    $this->request('setgenerate', array($generate, $gen_proc_limit));
+  }
+
+  /**
+   * settxfee 	<amount> 	<amount> is a real and is rounded to the nearest 0.00000001
+   */
+  public function setTxFee($amount) {
+    $this->request('settxfee', array($amount));
+  }
+
+  /**
+   * signmessage 	<bitcoinaddress> <message> 	Sign a message with the private key of an address. 	Y
+   */
+  public function signMessage($address, $message) {
+    return $this->request('signmessage', array($address, $message));
+  }
+
+  /**
+   * signrawtransaction 	<hexstring> [{"txid":txid,"vout":n,"scriptPubKey":hex},...] [<privatekey1>,...] 	version 0.7 Adds signatures to a raw transaction and returns the resulting raw transaction. 	Y/N
+   */
+  public function signRawTransaction($raw_transaction, $inputs = NULL, $outputs = NULL) {
+    return $this->request('signrawtransaction', array($raw_transaction, $inputs, $outputs));
+  }
+
+  /**
+   * stop 		Stop bitcoin server.
    */
   public function stop() {
-    return $this->query("stop");
+    $this->request('stop');
   }
 
   /**
-   * Check that $address looks like a proper Bitcoin address.
-   *
-   * @param string $address String to test for validity as a Bitcoin address
-   * @return array An array containing:
-   * 	"isvalid" => true or false
-   * 	"ismine" => true if the address is in the server's wallet
-   * 	"address" => bitcoinaddress
-   *  Note: ismine and address are only returned if the address is valid.
-   * @throws BitcoinClientException
+   * submitblock 	<hex data> [optional-params-obj] 	Attempts to submit new block to network.
    */
-  public function validateaddress($address) {
-    if (!$address || empty($address))
-      throw new BitcoinClientException("validateaddress requires a Bitcoin address");
-    return $this->query("validateaddress", $address);
+  public function submitBlock($block, $params = NULL) {
+    $this->request('submitblock', array($block, $params));
   }
 
   /**
-   * Return information about a specific transaction.
-   *
-   * @param string $txid 64-digit hexadecimal transaction ID
-   * @return array An error array, or an array containing:
-   *    "amount" => float Transaction amount
-   *    "fee" => float Transaction fee
-   *    "confirmations" => integer Network confirmations of this transaction
-   *    "txid" => string The transaction ID
-   *    "message" => string Transaction "comment" message
-   *    "to" => string Transaction "to" message
-   * @throws BitcoinClientException
-   * @since 0.3.18
+   * validateaddress 	<bitcoinaddress> 	Return information about <bitcoinaddress>.
    */
-  public function gettransaction($txid) {
-    if (!$txid || empty($txid) || strlen($txid) != 64 || !preg_match('/^[0-9a-fA-F]+$/', $txid))
-      throw new BitcoinClientException("gettransaction requires a valid hexadecimal transaction ID");
-    return $this->query("gettransaction", $txid);
+  public function validateAddress($address) {
+    return $this->request('validateaddress', array($address));
   }
 
   /**
-   * Move bitcoins between accounts.
-   *
-   * @param string $fromaccount
-   *    Account to move from. If given as an empty string ("") or NULL, bitcoins will
-   *    be moved from the wallet balance to the target account.
-   * @param string $toaccount
-   *     Account to move to
-   * @param float $amount
-   *     Amount to move
-   * @param integer $minconf
-   *     Minimum number of confirmations on bitcoins being moved
-   * @param string $comment
-   *     Transaction comment
-   * @throws BitcoinClientException
-   * @since 0.3.18
+   * verifymessage 	<bitcoinaddress> <signature> <message> 	Verify a signed message.
    */
-  public function move($fromaccount = "", $toaccount, $amount, $minconf = 1, $comment = NULL) {
-    if (!$fromaccount) $fromaccount = "";
-    if (!$toaccount) $toaccount = "";
-
-    if (!$amount || !is_numeric($amount) || $amount <= 0)
-      throw new BitcoinClientException("move requires a from account, to account and numeric amount > 0");
-    if (!is_numeric($minconf) || $minconf < 0)
-      throw new BitcoinClientException('move requires a numeric $minconf >= 0');
-    if (!$comment || empty($comment))
-      return $this->query("move", $fromaccount, $toaccount, $amount, $minconf);
-    return $this->query("move", $fromaccount, $toaccount, $amount, $minconf, $comment);
+  public function verifyMessage($address, $signature, $message) {
+    return $this->request('verifymessage', array($address, $signature, $message));
   }
 
   /**
-   * Send $amount from $account's balance to $toaddress. This method will fail
-   * if there is less than $amount bitcoins with $minconf confirmations in the
-   * account's balance (unless $account is the empty-string-named default
-   * account; it behaves like the sendtoaddress method). Returns transaction
-   * ID on success.
-   *
-   * @param string $account Account to send from
-   * @param string $toaddress Bitcoin address to send to
-   * @param float $amount Amount to send
-   * @param integer $minconf Minimum number of confirmations on bitcoins being sent
-   * @param string $comment
-   * @param string $comment_to
-   * @return string Hexadecimal transaction ID
-   * @throws BitcoinClientException
-   * @since 0.3.18
+   * walletlock 		Removes the wallet encryption key from memory, locking the wallet. After calling this method, you will need to call walletpassphrase again before being able to call any methods which require the wallet to be unlocked.
    */
-  public function sendfrom($account, $toaddress, $amount, $minconf = 1, $comment = NULL, $comment_to = NULL) {
-    if (!$account || !$toaddress || empty($toaddress) || !$amount || !is_numeric($amount) || $amount <= 0)
-      throw new BitcoinClientException("sendfrom requires a from account, to account and numeric amount > 0");
-    if (!is_numeric($minconf) || $minconf < 0)
-      throw new BitcoinClientException('sendfrom requires a numeric $minconf >= 0');
-    if (!$comment && !$comment_to)
-      return $this->query("sendfrom", $account, $toaddress, $amount, $minconf);
-    if (!$comment_to)
-      return $this->query("sendfrom", $account, $toaddress, $amount, $minconf, $comment);
-    $this->query("sendfrom", $account, $toaddress, $amount, $minconf, $comment, $comment_to);
+  public function walletLock() {
+    $this->request('walletlock');
   }
 
   /**
-   * Return formatted hash data to work on, or try to solve specified block.
-   *
-   * If $data is provided, tries to solve the block and returns true if successful.
-   * If $data is not provided, returns formatted hash data to work on.
-   *
-   * @param string $data Block data
-   * @return mixed
-   *    boolean TRUE if $data provided and block solving successful
-   *    array otherwise, containing:
-   *      "midstate" => string, precomputed hash state after hashing the first half of the data
-   *      "data" => string, block data
-   *      "hash1" => string, formatted hash buffer for second hash
-   *      "target" => string, little endian hash target
-   * @throws BitcoinClientException
-   * @since 0.3.18
+   * walletpassphrase 	<passphrase> <timeout> 	Stores the wallet decryption key in memory for <timeout> seconds.
    */
-  public function getwork($data = NULL) {
-    if (!$data)
-      return $this->query("getwork");
-    return $this->query("getwork", $data);
+  public function walletPassphrase($passphrase, $timeout) {
+    $this->request('walletpassphrase', array($passphrase, $timeout));
   }
 
   /**
-   * Return the current bitcoin address for receiving payments to $account.
-   * The account and address will be created if $account doesn't exist.
-   *
-   * @param string $account Account name
-   * @return string Bitcoin address for $account
-   * @throws BitcoinClientException
-   * @since 0.3.18
+   * walletpassphrasechange 	<oldpassphrase> <newpassphrase> 	Changes the wallet passphrase from <oldpassphrase> to <newpassphrase>. 
    */
-  public function getaccountaddress($account) {
-    if (!$account || empty($account))
-      throw new BitcoinClientException("getaccountaddress requires an account");
-    return $this->query("getaccountaddress", $account);
+  public function walletPassphraseChange($old_passphrase, $new_passphrase) {
+    $this->request('walletpassphrasechange', array($old_passphrase, $new_passphrase));
   }
-
-  /**
-   * Return a recent hashes per second performance measurement.
-   *
-   * @return integer Hashes per second
-   * @throws BitcoinClientException
-   */
-  public function gethashespersec() {
-    return $this->query("gethashespersec");
-  }
-
-  /**
-   * Returns the list of addresses associated with the given account.
-   *
-   * @param string $account
-   * @return array
-   *    A simple array of Bitcoin addresses associated with $account, empty
-   *    if the account doesn't exist.
-   * @throws BitcoinClientException
-   */
-  public function getaddressesbyaccount($account) {
-    if (!$account || empty($account))
-      throw new BitcoinClientException("getaddressesbyaccount requires an account");
-    return $this->query("getaddressesbyaccount", $account);
-  }
-
-  /**
-   * Returns the list of transactions associated with the given account.
-   *
-   * @param string $account The account to get transactions from. Accepts empty string "" and wildcard "*" values
-   * @param integer $count The number of transactions to return.
-   * @param integer $from The start number of transactions.
-   * @return array
-   *    "account" => account of transaction
-   *    "address" => address of transaction
-   *    "category" => 'send' or 'recieve'
-   *    "amount" => Amount sent/recieved
-   *    "fee" => Only on sent transactions, transaction fee taken
-   *    "confirmations" => Confirmations
-   *    "txid" => Transaction ID
-   *    "time" => Time of transaction
-   *    * @throws BitcoinClientException
-   */
-  public function listtransactions($account, $count = 10, $from = 0) {
-	if (!$account) $account = "";
-
-    if (!is_numeric($count) || $count < 0)
-      throw new BitcoinClientException('listtransactions requires a numeric count >= 0');
-    if (!is_numeric($from) || $from < 0)
-      throw new BitcoinClientException('listtransactions requires a numeric from >= 0');
-    return $this->query("listtransactions", $account, $count, $from);
-  }
-
-  /**
-   * Returns the list of accounts.
-   *
-   */
-  public function listaccounts($minconf = 1) {
-    return $this->query("listaccounts", $minconf);
-  }
-
-  /**
-   * Returns Transaction id (txid)
-   *
-   * @param string $fromAccount Account to send from
-   * @param array $sendTo Key=address Value=amount
-   * @param integer $minconf
-   * @param string $comment
-   * @return string Hexadecimal transaction ID on success.
-   * @throws BitcoinClientException
-   * @since 0.3.21
-   * @author codler<github>
-   */
-  public function sendmany($fromAccount, $sendTo, $minconf = 1, $comment=NULL) {
-    if (!$fromAccount || empty($fromAccount))
-      throw new BitcoinClientException("sendmany requires an account");
-    if (!is_numeric($minconf) || $minconf < 0)
-      throw new BitcoinClientException('sendmany requires a numeric minconf >= 0');
-
-    if (!$comment)
-      return $this->query("sendmany", $fromAccount, $sendTo, $minconf);
-    return $this->query("sendmany", $fromAccount, $sendTo, $minconf, $comment);
-  }
-
+   
 }

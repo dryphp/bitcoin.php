@@ -10,9 +10,16 @@
     {"name": "yajiedesign", "email": "yajiedesign@gmail.com"}
   ],
   "require": {
-    "php": ">=5.3.2"
+    "php": ">=5.3.2",
+    "graze/guzzle-jsonrpc": "dev-master"
   },
   "autoload": {
     "psr-0": { "bitcoin\\bitcoinphp": "src/" }
-  }
+  },
+  "repositories": [
+    {
+      "type": "git",
+      "url": "https://github.com/drupalnomad/guzzle-jsonrpc"
+    }
+  ]
 }
