@@ -14,6 +14,10 @@ class BitcoinClient {
     $this->getInfo();
   }
   
+  public static function URI($scheme, $username, $password, $hostname, $port) {
+    return $scheme . '://' . rawurlencode($username) . ':' . rawurlencode($password) . '@' . rawurlencode($hostname) . ':' . (int) $port;
+  }
+
   public function request($method, $params = array()) {
     return $this->client->request($method, 1, $params)->send()->getResult();
   }

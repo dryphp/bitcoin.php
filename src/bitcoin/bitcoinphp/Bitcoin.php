@@ -233,4 +233,5 @@ class Bitcoin {
     }
     return $string;
   }
+
 }
