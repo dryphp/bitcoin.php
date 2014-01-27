@@ -234,4 +234,19 @@ class Bitcoin {
     return $string;
   }
 
+  /**
+   * Converts a bitcoin amount to a satoshi amount.
+   *
+   * @param float $amount
+   *   A bitcoin amount.
+   *
+   * @return integer
+   *   A satoshi amount.
+   *
+   * @see https://en.bitcoin.it/wiki/Proper_Money_Handling_%28JSON-RPC%29
+   */
+  public static function bitcoinToSatoshi($amount) {
+    return round($amount * 1e8);
+  }
+
 }
