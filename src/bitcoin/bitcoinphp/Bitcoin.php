@@ -80,7 +80,7 @@ class Bitcoin {
    * @return string
    * @access private
    */
-  private static function decodeBase58($base58) {
+  public static function decodeBase58($base58) {
     $origbase58 = $base58;
 
     //only valid chars allowed
@@ -116,7 +116,7 @@ class Bitcoin {
    * @return string
    * @access private
    */
-  private static function encodeBase58($hex) {
+  public static function encodeBase58($hex) {
     if (strlen($hex) % 2 != 0) {
       die("encodeBase58: uneven number of hex characters");
     }
