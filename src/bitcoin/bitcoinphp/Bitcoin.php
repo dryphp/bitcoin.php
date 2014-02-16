@@ -255,7 +255,7 @@ class Bitcoin {
    * @param integer $amount
    *   A satoshi amount.
    *
-   * @param float
+   * @return float
    *   A bitcoin amount.
    *
    * @see https://en.bitcoin.it/wiki/Proper_Money_Handling_%28JSON-RPC%29
