@@ -661,9 +661,12 @@ To get a list of accounts on the system, execute bitcoind listreceivedbyaddress 
 
   /**
    * sendrawtransaction 	<hexstring> 	version 0.7 Submits raw transaction (serialized, hex-encoded) to local node and network.
+   *
+   * @return string
+   *   Transaction ID.
    */
   public function sendRawTransaction($raw_transaction) {
-    $this->request('sendrawtransaction', array($raw_transaction));
+    return $this->request('sendrawtransaction', array($raw_transaction));
   }
 
   /**
