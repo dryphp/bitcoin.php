@@ -586,7 +586,7 @@ To get a list of accounts on the system, execute bitcoind listreceivedbyaddress 
    * transactions for account [account]. If [account] not provided will return
    * recent transaction from all accounts.
    */
-  public function listTransactions($account = NULL, $count = 10, $from = 0) {
+  public function listTransactions($account = '', $count = 10, $from = 0) {
     return $this->request('listtransactions', array($account, $count, $from));
   }
 
