@@ -185,7 +185,7 @@ class BitcoinClient {
    * If [account] is not specified, returns the server's total available
    * balance. If [account] is specified, returns the balance in the account.
    */
-  public function getBalance($account = NULL, $minconf = 1) {
+  public function getBalance($account = '', $minconf = 1) {
     return $this->request('getbalance', array($account, $minconf));
   }
 
@@ -432,7 +432,7 @@ class BitcoinClient {
    * Returns details about an unspent transaction output (UTXO)
    */
   public function getTxOut($txid, $n, $includemempool = TRUE) {
-    return $this->request('gettxout', array($txid, $n, $includemempool));
+    return $this->request('gettxout', array($txid, $n));//, $includemempool));
   }
 
   /**
