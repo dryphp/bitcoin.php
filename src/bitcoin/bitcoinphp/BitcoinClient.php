@@ -671,6 +671,8 @@ To get a list of accounts on the system, execute bitcoind listreceivedbyaddress 
 
   /**
    * sendtoaddress 	<bitcoinaddress> <amount> [comment] [comment-to] 	<amount> is a real and is rounded to 8 decimal places. Returns the transaction ID <txid> if successful. 	Y
+   *
+   * @throws \Guzzle\Http\Exception\ServerErrorResponseException
    */
   public function sendToAddress($address, $amount, $comment = NULL, $comment_to = NULL) {
     return $this->request('sendtoaddress', array($address, $amount, $comment, $comment_to));
