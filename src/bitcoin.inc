@@ -826,7 +826,7 @@ class BitcoinClient extends jsonrpc_client {
    * @since 0.3.18
    */
   public function sendfrom($account, $toaddress, $amount, $minconf = 1, $comment = NULL, $comment_to = NULL) {
-    if (!$account || !$toaddress || empty($toaddress) || !$amount || !is_numeric($amount) || $amount <= 0)
+    if (is_null($account) || !$toaddress || empty($toaddress) || !$amount || !is_numeric($amount) || $amount <= 0)
       throw new BitcoinClientException("sendfrom requires a from account, to account and numeric amount > 0");
     if (!is_numeric($minconf) || $minconf < 0)
       throw new BitcoinClientException('sendfrom requires a numeric $minconf >= 0');
@@ -948,7 +948,7 @@ class BitcoinClient extends jsonrpc_client {
    * @author codler<github>
    */
   public function sendmany($fromAccount, $sendTo, $minconf = 1, $comment=NULL) {
-    if (!$fromAccount || empty($fromAccount))
+    if (is_null($fromAccount))
       throw new BitcoinClientException("sendmany requires an account");
     if (!is_numeric($minconf) || $minconf < 0)
       throw new BitcoinClientException('sendmany requires a numeric minconf >= 0');
