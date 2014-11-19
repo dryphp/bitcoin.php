@@ -928,6 +928,34 @@ class BitcoinClient extends jsonrpc_client {
   }
 
   /**
+   * Returns all transactions in blocks since block [blockhash], or all transactions if omitted.
+   * [target-confirmations] intentionally does not affect the list of returned transactions,
+   * but only affects the returned "lastblock" value.
+   *
+   * @param string $blockhash Start block
+   * @param integer $targetconfirmations Affects the returned "lastblock" value
+   * @return array
+   *    "account" => account of transaction
+   *    "address" => address of transaction
+   *    "category" => 'send' or 'recieve'
+   *    "amount" => Amount sent/recieved
+   *    "fee" => Only on sent transactions, transaction fee taken
+   *    "confirmations" => Confirmations
+   *    "blockhash" => The block hash containing the transaction. Available for 'send' and 'receive' category of transactions.
+   *    "blockindex" => The block index containing the transaction. Available for 'send' and 'receive' category of transactions
+   *    "blocktime" => The block index containing the transaction. Available for 'send' and 'receive' category of transactions.
+   *    "txid" => Transaction ID
+   *    "time" => Time of transaction
+   */
+  public function listsinceblock($blockhash = NULL, $targetconfirmations = NULL) {
+    if (!$blockhash)
+      return $this->query("listsinceblock");
+    if (!$targetconfirmations)
+        return $this->query("listsinceblock", $blockhash);
+    return $this->query("listsinceblock", $blockhash, $targetconfirmations);
+  }
+
+  /**
    * Returns the list of accounts.
    *
    */
