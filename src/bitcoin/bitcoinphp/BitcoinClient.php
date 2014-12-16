@@ -11,7 +11,6 @@ class BitcoinClient {
 
   public function __construct(JsonRpcClientInterface $client) {
     $this->client = $client;
-    $this->getInfo();
   }
   
   public static function URI($scheme, $username, $password, $hostname, $port) {
