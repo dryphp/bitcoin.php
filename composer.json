@@ -1,0 +1,19 @@
+{
+  "name": "bluedroplet/bitcoin-php",
+  "type": "library",
+  "description": "A Bitcoin library for PHP.",
+  "keywords": ["bitcoin", "php"],
+  "homepage": "https://github.com/bluedroplet/bitcoin-php",
+  "license": "UNLICENSE",
+  "authors": [
+    {"name": "Jonathan Brown", "email": "jbrown@bluedroplet.com"},
+    {"name": "yajiedesign", "email": "yajiedesign@gmail.com"}
+  ],
+  "require": {
+    "php": ">=5.3.2",
+    "graze/guzzle-jsonrpc": "~2.1"
+  },
+  "autoload": {
+    "psr-0": { "bitcoin\\bitcoinphp": "src/" }
+  }
+}
