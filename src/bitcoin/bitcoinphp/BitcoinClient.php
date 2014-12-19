@@ -2,8 +2,7 @@
 
 namespace bitcoin\bitcoinphp;
 
-use Graze\Guzzle\JsonRpc\JsonRpcClientInterface;
-
+use Graze\GuzzleHttp\JsonRpc\ClientInterface as JsonRpcClientInterface;
 
 class BitcoinClient {
 
@@ -12,13 +11,13 @@ class BitcoinClient {
   public function __construct(JsonRpcClientInterface $client) {
     $this->client = $client;
   }
-  
+
   public static function URI($scheme, $username, $password, $hostname, $port) {
     return $scheme . '://' . rawurlencode($username) . ':' . rawurlencode($password) . '@' . rawurlencode($hostname) . ':' . (int) $port;
   }
 
-  public function request($method, $params = array()) {
-    return $this->client->request($method, 1, $params)->send()->getResult();
+  public function request($method, $params = []) {
+    return $this->client->send($this->client->request(1, $method, $params))->getRpcResult();
   }
   
   /**
@@ -471,6 +470,20 @@ If [data] is specified, tries to solve the block and returns true if it was succ
    */
   public function help($command = NULL) {
     return $this->request('help');
+  }
+
+  /**
+   * importaddress
+   *
+   * @param $address
+   * @param $label
+   * @parma $rescan
+   *
+   * Adds an address or script (in hex) that can be watched as if it were in
+   * your wallet but cannot be used to spend.
+   */
+  public function importAddress($address, $label = "", $rescan = TRUE) {
+    $this->request('importaddress', array($address, $label, $rescan));
   }
 
   /**

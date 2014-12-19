@@ -11,15 +11,9 @@
   ],
   "require": {
     "php": ">=5.3.2",
-    "graze/guzzle-jsonrpc": "dev-master"
+    "graze/guzzle-jsonrpc": "~2.1"
   },
   "autoload": {
     "psr-0": { "bitcoin\\bitcoinphp": "src/" }
-  },
-  "repositories": [
-    {
-      "type": "git",
-      "url": "https://github.com/drupalnomad/guzzle-jsonrpc"
-    }
-  ]
+  }
 }
