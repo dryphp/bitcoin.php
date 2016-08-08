@@ -57,7 +57,7 @@ class Bitcoin {
    * @return string
    * @access private
    */
-  private function encodeHex($dec) {
+  private static function encodeHex($dec) {
     $return = "";
     while (bccomp($dec, 0) == 1) {
       $dv = (string) bcdiv($dec, "16", 0);
@@ -75,7 +75,7 @@ class Bitcoin {
    * @return string
    * @access private
    */
-  private function decodeBase58($base58) {
+  private static function decodeBase58($base58) {
     $origbase58 = $base58;
 
     //only valid chars allowed
