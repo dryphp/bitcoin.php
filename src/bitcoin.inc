@@ -826,7 +826,7 @@ class BitcoinClient extends jsonrpc_client {
    * @since 0.3.18
    */
   public function sendfrom($account, $toaddress, $amount, $minconf = 1, $comment = NULL, $comment_to = NULL) {
-    if (!$account || !$toaddress || empty($toaddress) || !$amount || !is_numeric($amount) || $amount <= 0)
+    if (is_null($account) || !$toaddress || empty($toaddress) || !$amount || !is_numeric($amount) || $amount <= 0)
       throw new BitcoinClientException("sendfrom requires a from account, to account and numeric amount > 0");
     if (!is_numeric($minconf) || $minconf < 0)
       throw new BitcoinClientException('sendfrom requires a numeric $minconf >= 0');
@@ -928,6 +928,34 @@ class BitcoinClient extends jsonrpc_client {
   }
 
   /**
+   * Returns all transactions in blocks since block [blockhash], or all transactions if omitted.
+   * [target-confirmations] intentionally does not affect the list of returned transactions,
+   * but only affects the returned "lastblock" value.
+   *
+   * @param string $blockhash Start block
+   * @param integer $targetconfirmations Affects the returned "lastblock" value
+   * @return array
+   *    "account" => account of transaction
+   *    "address" => address of transaction
+   *    "category" => 'send' or 'recieve'
+   *    "amount" => Amount sent/recieved
+   *    "fee" => Only on sent transactions, transaction fee taken
+   *    "confirmations" => Confirmations
+   *    "blockhash" => The block hash containing the transaction. Available for 'send' and 'receive' category of transactions.
+   *    "blockindex" => The block index containing the transaction. Available for 'send' and 'receive' category of transactions
+   *    "blocktime" => The block index containing the transaction. Available for 'send' and 'receive' category of transactions.
+   *    "txid" => Transaction ID
+   *    "time" => Time of transaction
+   */
+  public function listsinceblock($blockhash = NULL, $targetconfirmations = NULL) {
+    if (!$blockhash)
+      return $this->query("listsinceblock");
+    if (!$targetconfirmations)
+        return $this->query("listsinceblock", $blockhash);
+    return $this->query("listsinceblock", $blockhash, $targetconfirmations);
+  }
+
+  /**
    * Returns the list of accounts.
    *
    */
@@ -948,7 +976,7 @@ class BitcoinClient extends jsonrpc_client {
    * @author codler<github>
    */
   public function sendmany($fromAccount, $sendTo, $minconf = 1, $comment=NULL) {
-    if (!$fromAccount || empty($fromAccount))
+    if (is_null($fromAccount))
       throw new BitcoinClientException("sendmany requires an account");
     if (!is_numeric($minconf) || $minconf < 0)
       throw new BitcoinClientException('sendmany requires a numeric minconf >= 0');
